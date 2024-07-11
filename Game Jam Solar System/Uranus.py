@@ -21,6 +21,7 @@ class Uranus:
         # Font
         self.font = pygame.font.Font(None, 74)
         self.small_font = pygame.font.Font(None, 36)
+        self.menu_font = pygame.font.Font(None, 48)
 
         # Initialize game variables
         self.game_over = False
@@ -35,12 +36,8 @@ class Uranus:
         self.bow_x, self.bow_y = self.WIDTH // 2, self.HEIGHT - 50
         self.bow_length = 50
 
-        # Pause menu variables
-        self.menu_font = pygame.font.Font(None, 48)
-        self.menu_text_color = (255, 255, 255)
-        self.menu_background_color = (0, 0, 0, 180)  # Translucent black
+        # Pause menu options
         self.menu_options = ["Resume (ESC)", "Restart (R)", "Quit (Q)"]
-        self.menu_option_positions = [(self.WIDTH // 2 - 100, self.HEIGHT // 2 - 50 + 50 * i) for i in range(3)]
         self.selected_option = 0
 
     class Balloon:
@@ -112,6 +109,7 @@ class Uranus:
     def reset_game(self):
         self.game_over = False
         self.congratulations = False
+        self.paused = False
         self.balloons = [self.Balloon(random.randint(50, self.WIDTH - 50), random.randint(50, self.HEIGHT - 50), self.RED, self) for _ in range(5)]
         self.balloons += [self.Balloon(random.randint(50, self.WIDTH - 50), random.randint(50, self.HEIGHT - 50), self.GRAY, self) for _ in range(10)]
         self.arrow = None
@@ -120,33 +118,18 @@ class Uranus:
     def draw_pause_menu(self):
         # Draw translucent background
         overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
-        overlay.fill(self.menu_background_color)
+        overlay.fill((0, 0, 0, 180))  # Translucent black
         self.screen.blit(overlay, (0, 0))
 
         # Draw menu options
         for idx, option in enumerate(self.menu_options):
-            text_surface = self.menu_font.render(option, True, self.menu_text_color)
-            self.screen.blit(text_surface, self.menu_option_positions[idx])
+            text_surface = self.menu_font.render(option, True, self.WHITE)
+            x, y = self.WIDTH // 2 - text_surface.get_width() // 2, self.HEIGHT // 2 - 50 + idx * 50
+            self.screen.blit(text_surface, (x, y))
 
             # Highlight selected option
             if idx == self.selected_option:
-                pygame.draw.rect(self.screen, self.WHITE, (*self.menu_option_positions[idx], text_surface.get_width(), text_surface.get_height()), 3)
-
-    def handle_pause_input(self):
-        keys = pygame.key.get_pressed()
-
-        if keys[pygame.K_UP]:
-            self.selected_option = (self.selected_option - 1) % len(self.menu_options)
-        elif keys[pygame.K_DOWN]:
-            self.selected_option = (self.selected_option + 1) % len(self.menu_options)
-        elif keys[pygame.K_RETURN]:
-            if self.selected_option == 0:  # Resume
-                self.paused = False
-            elif self.selected_option == 1:  # Restart
-                self.reset_game()
-            elif self.selected_option == 2:  # Quit
-                pygame.quit()
-                quit()
+                pygame.draw.rect(self.screen, self.WHITE, (x - 10, y - 10, text_surface.get_width() + 20, text_surface.get_height() + 20), 3)
 
     def main(self):
         running = True
@@ -158,52 +141,79 @@ class Uranus:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-
-                if event.type == pygame.KEYDOWN:
+                elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE and not self.game_over and not self.congratulations:
-                        self.paused = not self.paused
-
-                    if event.key == pygame.K_r and (self.game_over or self.congratulations):
+                        if self.paused:
+                            if self.selected_option == 0:
+                                self.paused = False  # Resume
+                            elif self.selected_option == 1:
+                                self.reset_game()  # Restart
+                            elif self.selected_option == 2:
+                                running = False  # Quit
+                        else:
+                            self.paused = not self.paused
+                    elif self.paused:
+                        if event.key == pygame.K_DOWN:
+                            self.selected_option = (self.selected_option + 1) % len(self.menu_options)
+                        elif event.key == pygame.K_UP:
+                            self.selected_option = (self.selected_option - 1) % len(self.menu_options)
+                        elif event.key == pygame.K_RETURN:
+                            if self.selected_option == 0:  # Resume
+                                self.paused = False
+                            elif self.selected_option == 1:  # Restart
+                                self.reset_game()
+                            elif self.selected_option == 2:  # Quit
+                                running = False
+                        elif event.key == pygame.K_r:
+                            self.reset_game()
+                        elif event.key == pygame.K_q:
+                            running = False
+                    elif event.key == pygame.K_r and (self.game_over or self.congratulations):
                         self.reset_game()
-
-                    if event.key == pygame.K_q and (self.game_over or self.congratulations):
-                        pygame.quit()
-                        quit()
-
-                if event.type == pygame.MOUSEBUTTONDOWN and not self.game_over and self.arrow is None and not self.congratulations:
+                    elif event.key == pygame.K_q and (self.game_over or self.congratulations):
+                        running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over and self.arrow is None and not self.congratulations and not self.paused:
                     x, y = event.pos
                     self.arrow = self.Arrow(self.bow_x, self.bow_y, x, y, self.BLACK)
 
             if not self.paused:
-                # Game logic
-                for balloon in self.balloons:
-                    balloon.move()
-                    balloon.draw(self.screen)
+                if not self.game_over and not self.congratulations:
+                    # Move and draw balloons
+                    for balloon in self.balloons:
+                        balloon.move()
+                        balloon.draw(self.screen)
 
-                if self.arrow:
-                    self.arrow.move()
-                    self.arrow.draw(self.screen)
+                    # Move and draw arrow
+                    if self.arrow:
+                        self.arrow.move()
+                        self.arrow.draw(self.screen)
 
-                    balloon = self.check_collision(self.arrow)
-                    if balloon:
-                        if balloon.color == self.RED:
-                            self.balloons.remove(balloon)
-                            self.arrow = None
-                            self.player_score += 1
-                            if self.player_score == 5:
-                                self.congratulations = True
-                                self.paused = True  # Automatically pause on congratulations
-                                self.show_congratulations()
-                        else:
+                        # Check for collisions
+                        balloon = self.check_collision(self.arrow)
+                        if balloon:
+                            if balloon.color == self.RED:
+                                self.balloons.remove(balloon)
+                                self.arrow = None
+                                self.player_score += 1
+                                if self.player_score == 5:
+                                    self.congratulations = True
+                                    self.show_congratulations()
+                            else:
+                                self.game_over = True
+                                self.show_game_over()
+                                self.arrow = None
+                        elif self.arrow.y < 0 or self.arrow.x < 0 or self.arrow.x > self.WIDTH:
                             self.game_over = True
-                            self.paused = True  # Automatically pause on game over
                             self.show_game_over()
                             self.arrow = None
-                    elif self.arrow.y < 0 or self.arrow.x < 0 or self.arrow.x > self.WIDTH:
-                        self.game_over = True
-                        self.paused = True  # Automatically pause on game over
-                        self.show_game_over()
-                        self.arrow = None
+
+                    # Draw bow and aiming line
+                    if self.arrow is None:
+                        mouse_x, mouse_y = pygame.mouse.get_pos()
+                        angle = math.atan2(mouse_y - self.bow_y, mouse_x - self.bow_x)
+                        end_x = self.bow_x + self.bow_length * math.cos(angle)
+                        end_y = self.bow_y + self.bow_length * math.sin(angle)
+                        pygame.draw.line(self.screen, self.BLACK, (self.bow_x, self.bow_y), (end_x, end_y), 5)
 
                 if self.game_over:
                     self.show_game_over()
@@ -211,26 +221,18 @@ class Uranus:
                 if self.congratulations:
                     self.show_congratulations()
 
-                # Draw bow and aiming line
-                if self.arrow is None:
-                    mouse_x, mouse_y = pygame.mouse.get_pos()
-                    angle = math.atan2(mouse_y - self.bow_y, mouse_x - self.bow_x)
-                    end_x = self.bow_x + self.bow_length * math.cos(angle)
-                    end_y = self.bow_y + self.bow_length * math.sin(angle)
-                    pygame.draw.line(self.screen, self.BLACK, (self.bow_x, self.bow_y), (end_x, end_y), 5)
+                # Draw score
+                score_text = self.small_font.render(f"Score: {self.player_score}/5", True, self.BLACK)
+                self.screen.blit(score_text, (20, 20))
 
             else:
                 self.draw_pause_menu()
-                self.handle_pause_input()
-
-            # Draw score
-            score_text = self.small_font.render(f"Score: {self.player_score}/5", True, self.BLACK)
-            self.screen.blit(score_text, (20, 20))
 
             pygame.display.flip()
             clock.tick(60)
 
         pygame.quit()
+
 
 if __name__ == "__main__":
     game = Uranus()

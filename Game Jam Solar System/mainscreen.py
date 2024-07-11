@@ -21,6 +21,7 @@ main_menu_options = ["Start Game", "Space Navigation", "Quit"]
 level_options = ["Stage 1 Earth", "Stage 2 Mars", "Stage 3 Venus", "Stage 4 Jupiter", "Stage 5 Saturn", "Stage 6 Uranus", "Stage 7 Neptune", "Stage 8 Mercury", "Stage 9 Sun"]
 selected_option = 0
 
+
 def draw_main_menu():
     screen.fill(BLACK)
 
@@ -36,6 +37,7 @@ def draw_main_menu():
         screen.blit(text_surface, text_rect)
 
     pygame.display.flip()
+
 
 def draw_level_selection_menu():
     screen.fill(BLACK)
@@ -74,8 +76,6 @@ def draw_level_selection_menu():
         screen.blit(text_surface, text_rect)
 
     pygame.display.flip()
-
-
 
 
 def main_screen():

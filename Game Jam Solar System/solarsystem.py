@@ -2,6 +2,7 @@ import pygame
 import math
 import sys
 
+
 class SolarSystem:
     def __init__(self):
         # Initialize Pygame

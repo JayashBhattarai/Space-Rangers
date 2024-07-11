@@ -41,6 +41,7 @@ class Neptune:
 
         # Font
         self.font = pygame.font.Font(None, 36)
+        self.menu_font = pygame.font.Font(None, 48)
 
         # Initialize game variables
         self.clock = pygame.time.Clock()
@@ -52,6 +53,11 @@ class Neptune:
         self.coins_collected = 0
         self.game_over = False
         self.game_won = False
+        self.paused = False
+
+        # Pause menu options
+        self.menu_options = ["Resume (ESC)", "Restart (R)", "Quit (Q)"]
+        self.selected_option = 0
 
     def reset_game(self):
         self.player_y = self.HEIGHT // 2 - self.player_height // 2
@@ -62,6 +68,7 @@ class Neptune:
         self.coins_collected = 0
         self.game_over = False
         self.game_won = False
+        self.paused = False
 
     def draw_player(self):
         pygame.draw.rect(self.screen, self.BLUE, self.player_rect)
@@ -91,6 +98,22 @@ class Neptune:
         self.draw_text("Press R to restart or Q to quit", 36, self.WIDTH // 2 - 150, self.HEIGHT // 2 + 50, self.WHITE)
         pygame.display.flip()
 
+    def draw_pause_menu(self):
+        # Draw translucent background
+        overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))  # Translucent black
+        self.screen.blit(overlay, (0, 0))
+
+        # Draw menu options
+        for idx, option in enumerate(self.menu_options):
+            text_surface = self.menu_font.render(option, True, self.WHITE)
+            x, y = self.WIDTH // 2 - text_surface.get_width() // 2, self.HEIGHT // 2 - 50 + idx * 50
+            self.screen.blit(text_surface, (x, y))
+
+            # Highlight selected option
+            if idx == self.selected_option:
+                pygame.draw.rect(self.screen, self.WHITE, (x - 10, y - 10, text_surface.get_width() + 20, text_surface.get_height() + 20), 3)
+
     def main(self):
         running = True
         while running:
@@ -105,18 +128,44 @@ class Neptune:
                             self.reset_game()
                         elif event.key == pygame.K_q:
                             running = False
+                    elif event.key == pygame.K_ESCAPE:
+                        if self.paused:
+                            if self.selected_option == 0:  # Resume
+                                self.paused = False
+                            elif self.selected_option == 1:  # Restart
+                                self.reset_game()
+                            elif self.selected_option == 2:  # Quit
+                                running = False
+                        else:
+                            self.paused = not self.paused
+                    elif self.paused:
+                        if event.key == pygame.K_DOWN:
+                            self.selected_option = (self.selected_option + 1) % len(self.menu_options)
+                        elif event.key == pygame.K_UP:
+                            self.selected_option = (self.selected_option - 1) % len(self.menu_options)
+                        elif event.key == pygame.K_RETURN:
+                            if self.selected_option == 0:  # Resume
+                                self.paused = False
+                            elif self.selected_option == 1:  # Restart
+                                self.reset_game()
+                            elif self.selected_option == 2:  # Quit
+                                running = False
+                        elif event.key == pygame.K_r:
+                            self.reset_game()
+                        elif event.key == pygame.K_q:
+                            running = False
 
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_UP] and self.player_rect.top > 0:
-                self.player_rect.y -= self.player_speed
-            if keys[pygame.K_DOWN] and self.player_rect.bottom < self.HEIGHT:
-                self.player_rect.y += self.player_speed
-            if keys[pygame.K_LEFT] and self.player_rect.left > 0:
-                self.player_rect.x -= self.player_speed_left  # Faster leftward movement
-            if keys[pygame.K_RIGHT] and self.player_rect.right < self.WIDTH:
-                self.player_rect.x += self.player_speed
+            if not self.paused and not self.game_over and not self.game_won:
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_UP] and self.player_rect.top > 0:
+                    self.player_rect.y -= self.player_speed
+                if keys[pygame.K_DOWN] and self.player_rect.bottom < self.HEIGHT:
+                    self.player_rect.y += self.player_speed
+                if keys[pygame.K_LEFT] and self.player_rect.left > 0:
+                    self.player_rect.x -= self.player_speed_left  # Faster leftward movement
+                if keys[pygame.K_RIGHT] and self.player_rect.right < self.WIDTH:
+                    self.player_rect.x += self.player_speed
 
-            if not self.game_over and not self.game_won:
                 self.distance_travelled += 0.1  # Increase distance travelled slightly faster
 
                 if self.distance_travelled >= self.finish_line_distance and self.coins_collected < 10:
@@ -177,6 +226,9 @@ class Neptune:
                 self.game_over_screen()
             if self.game_won:
                 self.game_won_screen()
+
+            if self.paused:
+                self.draw_pause_menu()
 
             pygame.display.flip()
             self.clock.tick(60)
