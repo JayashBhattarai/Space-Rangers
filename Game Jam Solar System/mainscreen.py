@@ -136,6 +136,9 @@ def main_screen():
                             game.main()
                         elif selected_option == 4:
                             print("Level 5 selected")
+                            from Saturn import Saturn
+                            game = Saturn()
+                            game.run()
                         elif selected_option == 5:
                             print("Level 6 selected")
                             from Uranus import Uranus
