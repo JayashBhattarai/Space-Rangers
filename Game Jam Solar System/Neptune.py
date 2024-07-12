@@ -46,7 +46,7 @@ class Neptune:
         # Initialize game variables
         self.clock = pygame.time.Clock()
         self.player_rect = pygame.Rect(self.player_x, self.player_y, self.player_width, self.player_height)
-        self.coins = [pygame.Rect(self.WIDTH + i * 200, random.randint(0, self.HEIGHT - self.coin_height), self.coin_width, self.coin_height) for i in range(2)]
+        self.coins = []
         self.obstacles = []
         self.fishes = []
         self.distance_travelled = 0
@@ -59,9 +59,24 @@ class Neptune:
         self.menu_options = ["Resume (ESC)", "Restart (R)", "Quit (Q)"]
         self.selected_option = 0
 
+        self.reset_game()
+
+        # Load images
+        self.player_img = pygame.image.load("submarine.png")
+        self.player_width, self.player_height = 100, 60  # Adjust dimensions as needed
+
+        self.player_img = pygame.transform.scale(self.player_img, (self.player_width, self.player_height))
+
+        self.fish_img = pygame.image.load("fish.png")
+        self.fish_img = pygame.transform.scale(self.fish_img, (self.fish_width, self.fish_height))
+
+        self.obstacle_img = pygame.image.load("wooden-box.png")
+        self.obstacle_img = pygame.transform.scale(self.obstacle_img, (self.obstacle_width, self.obstacle_height))
+
     def reset_game(self):
         self.player_y = self.HEIGHT // 2 - self.player_height // 2
-        self.coins = [pygame.Rect(self.WIDTH + i * 200, random.randint(0, self.HEIGHT - self.coin_height), self.coin_width, self.coin_height) for i in range(2)]
+        self.player_rect.topleft = (self.player_x, self.player_y)
+        self.coins = [self.spawn_object(self.coin_width, self.coin_height) for _ in range(2)]
         self.obstacles = []
         self.fishes = []
         self.distance_travelled = 0
@@ -71,16 +86,16 @@ class Neptune:
         self.paused = False
 
     def draw_player(self):
-        pygame.draw.rect(self.screen, self.BLUE, self.player_rect)
+        self.screen.blit(self.player_img, self.player_rect.topleft)
 
     def draw_coin(self, coin_rect):
         pygame.draw.ellipse(self.screen, self.YELLOW, coin_rect)
 
     def draw_obstacle(self, obstacle_rect):
-        pygame.draw.rect(self.screen, self.GRAY, obstacle_rect)
+        self.screen.blit(self.obstacle_img, obstacle_rect.topleft)
 
     def draw_fish(self, fish_rect):
-        pygame.draw.ellipse(self.screen, self.RED, fish_rect)
+        self.screen.blit(self.fish_img, fish_rect.topleft)
 
     def draw_text(self, text, size, x, y, color):
         text_surface = self.font.render(text, True, color)
@@ -113,6 +128,12 @@ class Neptune:
             # Highlight selected option
             if idx == self.selected_option:
                 pygame.draw.rect(self.screen, self.WHITE, (x - 10, y - 10, text_surface.get_width() + 20, text_surface.get_height() + 20), 3)
+
+    def spawn_object(self, width, height):
+        while True:
+            rect = pygame.Rect(self.WIDTH + random.randint(100, 300), random.randint(0, self.HEIGHT - height), width, height)
+            if not any(rect.colliderect(obj) for obj in self.coins + self.obstacles + self.fishes):
+                return rect
 
     def main(self):
         running = True
@@ -187,9 +208,8 @@ class Neptune:
 
                 # Spawn obstacles and fishes until finish line
                 if self.distance_travelled < self.finish_line_distance:
-                    if random.randint(0, 100) < 2:
-                        self.obstacles.append(
-                            pygame.Rect(self.WIDTH, random.randint(0, self.HEIGHT - self.obstacle_height), self.obstacle_width, self.obstacle_height))
+                    if random.randint(0, 100) < 5 and len(self.obstacles) < 5:
+                        self.obstacles.append(self.spawn_object(self.obstacle_width, self.obstacle_height))
 
                     for obstacle in self.obstacles:
                         obstacle.x -= self.player_speed
@@ -198,8 +218,8 @@ class Neptune:
                         if self.player_rect.colliderect(obstacle):
                             self.game_over = True
 
-                    if random.randint(0, 100) < 2:
-                        self.fishes.append(pygame.Rect(self.WIDTH, random.randint(0, self.HEIGHT - self.fish_height), self.fish_width, self.fish_height))
+                    if random.randint(0, 100) < 10 and len(self.fishes) < 7:
+                        self.fishes.append(self.spawn_object(self.fish_width, self.fish_height))
 
                     for fish in self.fishes:
                         fish.x -= self.player_speed
