@@ -3,13 +3,50 @@ import math
 import random
 import time
 from pygame import mixer
+import textwrap
 
+class TextBox:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = ""
+        self.rendered_text = []
+        self.text_content = []
+        self.reveal_index = 0
+        self.line_spacing = 5
+        self.font = pygame.font.Font(None, 32)
+
+    def set_text(self, text):
+        self.text = text
+        self.rendered_text = []
+        self.text_content = []
+        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        for line in wrapped_text:
+            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
+            self.text_content.append(line)
+        self.reveal_index = 0
+
+    def update(self):
+        self.reveal_index += 1
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, (0, 0, 0), self.rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
+
+        y = self.rect.top + 10
+        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
+            x = self.rect.left + 10
+            if i * len(content) < self.reveal_index:
+                surface.blit(line, (x, y))
+                y += line.get_height() + self.line_spacing
+
+    def is_finished(self):
+        return self.reveal_index >= sum(len(line) for line in self.text_content)
 
 class Sun:
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((1200, 800))
-        self.background = pygame.image.load('background.png')
+        self.screen = pygame.display.set_mode((1200, 750))
+        self.background = pygame.image.load('sun.jpg')
         pygame.display.set_caption("Level Sun")
         icon = pygame.image.load('ufo.png')
         pygame.display.set_icon(icon)
@@ -36,21 +73,21 @@ class Sun:
             self.enemyImg.append(pygame.image.load('alien.png'))
             self.enemyX.append(600)
             self.enemyY.append(75)
-            self.enemyX_change.append(2)
-            self.enemyY_change.append(40)
+            self.enemyX_change.append(1)  # Slower enemy movement
+            self.enemyY_change.append(20)
 
         # Laser
         self.laserImg = pygame.image.load('bullet.png')
         self.laserX = 0
         self.laserY = 640
         self.laserX_change = 0
-        self.laserY_change = 5
+        self.laserY_change = 2.5  # Slower laser movement
         self.laser_state = "ready"
 
         # Enemy Bullet
         self.enemy_bullet_img = pygame.image.load('bullet.png')
         self.enemy_bullets = []
-        self.bulletY_change = 5
+        self.bulletY_change = 2.5  # Slower enemy bullet movement
 
         # Health
         self.hp_value = 100
@@ -58,7 +95,8 @@ class Sun:
 
         # Fonts
         self.font = pygame.font.Font('freesansbold.ttf', 32)
-        self.over_font = pygame.font.Font('freesansbold.ttf', 128)
+        self.over_font = pygame.font.Font('freesansbold.ttf', 96)  # Smaller font for "Congratulations"
+        self.menu_font = pygame.font.Font('freesansbold.ttf', 36)
 
         self.textX = 10
         self.textY = 10
@@ -68,20 +106,22 @@ class Sun:
 
         # Pause menu variables
         self.paused = False
-        self.menu_font = pygame.font.Font('freesansbold.ttf', 36)
         self.menu_text_color = (255, 255, 255)
         self.menu_background_color = (0, 0, 0, 180)  # Translucent black
         self.menu_options = ["Resume (ESC)", "Restart (R)", "Quit (Q)"]
         self.menu_option_positions = [(500, 300), (500, 370), (500, 440)]
         self.selected_option = 0
 
+        # Text box and game state
+        self.text_box = TextBox(50, 600, 1100, 150)
+        self.game_state = "intro"
+        self.intro_text = "So you're here.. Think you can defeat me? Give it a try!"
+        self.victory_text = "Yeah! We did it!!"
+        self.defeat_text = "He's too strong..."
+
     def show_hp(self, x, y):
         hp = self.font.render("HP: " + str(self.hp_value), True, (255, 255, 255))
         self.screen.blit(hp, (x, y))
-
-    def game_over_text(self):
-        over_text = self.over_font.render("GAME OVER", True, (255, 255, 255))
-        self.screen.blit(over_text, (350, 200))
 
     def player(self, x, y):
         self.screen.blit(self.playerImg, (x, y))
@@ -105,17 +145,14 @@ class Sun:
         return distance < 27
 
     def draw_pause_menu(self):
-        # Draw translucent background
         overlay = pygame.Surface((1200, 800), pygame.SRCALPHA)
         overlay.fill(self.menu_background_color)
         self.screen.blit(overlay, (0, 0))
 
-        # Draw menu options
         for idx, option in enumerate(self.menu_options):
             text_surface = self.menu_font.render(option, True, self.menu_text_color)
             self.screen.blit(text_surface, self.menu_option_positions[idx])
 
-            # Highlight selected option
             if idx == self.selected_option:
                 pygame.draw.rect(self.screen, (255, 255, 255), (*self.menu_option_positions[idx], text_surface.get_width(), text_surface.get_height()), 3)
 
@@ -131,121 +168,160 @@ class Sun:
                 self.paused = False
             elif self.selected_option == 1:  # Restart
                 self.__init__()  # Restart the game
+                self.text_box.set_text(self.intro_text)  # Set the intro text when restarting
             elif self.selected_option == 2:  # Quit
                 pygame.quit()
                 quit()
 
     def main(self):
         running = True
-        game_over = False
+
+        self.text_box.set_text(self.intro_text)
 
         while running:
             self.screen.fill((0, 0, 0))
             self.screen.blit(self.background, (0, 0))
 
-            if not game_over:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
 
-                    if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_ESCAPE:
-                            self.paused = not self.paused
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.paused = not self.paused
 
-                        if not self.paused:
-                            if event.key == pygame.K_LEFT:
-                                self.playerX_change = -3.5
-                            if event.key == pygame.K_RIGHT:
-                                self.playerX_change = 3.5
-                            if event.key == pygame.K_SPACE:
-                                if self.laser_state == "ready":
-                                    bullet_sound = mixer.Sound('laser.wav')
-                                    bullet_sound.play()
-                                    self.laserX = self.playerX
-                                    self.fire_laser(self.laserX, self.laserY)
+                    if self.game_state == "intro" and event.key == pygame.K_SPACE:
+                        if self.text_box.is_finished():
+                            self.game_state = "playing"
+                        else:
+                            self.text_box.reveal_index = sum(len(line) for line in self.text_box.text_content)
 
+                    if not self.paused and self.game_state == "playing":
+                        if event.key == pygame.K_LEFT:
+                            self.playerX_change = -1.5  # Slower player movement
+                        if event.key == pygame.K_RIGHT:
+                            self.playerX_change = 1.5  # Slower player movement
+                        if event.key == pygame.K_SPACE:
+                            if self.laser_state == "ready":
+                                bullet_sound = mixer.Sound('laser.wav')
+                                bullet_sound.play()
+                                self.laserX = self.playerX
+                                self.fire_laser(self.laserX, self.laserY)
+
+                    if self.game_state in ["victory", "defeat"]:
                         if event.key == pygame.K_r:
-                            if self.paused:
-                                self.__init__()  # Restart the game
+                            self.__init__()
+                            self.text_box.set_text(self.intro_text)  # Set the intro text when restarting
+                        elif event.key == pygame.K_q:
+                            running = False
 
-                        if event.key == pygame.K_q:
-                            if self.paused:
-                                pygame.quit()  # Quit the game
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                        self.playerX_change = 0
 
-                    if event.type == pygame.KEYUP:
-                        if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                            self.playerX_change = 0
+            if self.game_state == "intro":
+                self.text_box.update()
+                self.text_box.draw(self.screen)
 
-                if not self.paused:
-                    self.playerX += self.playerX_change
-                    if self.playerX <= 0:
-                        self.playerX = 0
-                    elif self.playerX >= 1136:
-                        self.playerX = 1136
+            elif self.game_state == "playing":
+                self.playerX += self.playerX_change
+                if self.playerX <= 0:
+                    self.playerX = 0
+                elif self.playerX >= 1136:
+                    self.playerX = 1136
 
-                    for i in range(self.number_of_enemy):
-                        self.enemyX[i] += self.enemyX_change[i]
-                        if self.enemyX[i] <= 0:
-                            self.enemyX_change[i] = 1
-                        elif self.enemyX[i] >= 1136:
-                            self.enemyX_change[i] = -1
+                for i in range(self.number_of_enemy):
+                    self.enemyX[i] += self.enemyX_change[i]
+                    if self.enemyX[i] <= 0:
+                        self.enemyX_change[i] = 0.5  # Slower enemy direction change
+                    elif self.enemyX[i] >= 1136:
+                        self.enemyX_change[i] = -0.5  # Slower enemy direction change
 
-                        current_time = time.time()
-                        if current_time - self.last_fired_time >= self.fire_interval:
-                            self.fire_enemy_bullet(self.enemyX[i], self.enemyY[i])
-                            self.last_fired_time = current_time
-                            self.fire_interval = random.uniform(1, 3)
+                    current_time = time.time()
+                    if current_time - self.last_fired_time >= self.fire_interval:
+                        self.fire_enemy_bullet(self.enemyX[i], self.enemyY[i])
+                        self.last_fired_time = current_time
+                        self.fire_interval = random.uniform(1, 3)
 
-                        collision = self.isCollision(self.enemyX[i], self.enemyY[i], self.laserX, self.laserY)
-                        if collision:
-                            explosion_sound = mixer.Sound('explosion.wav')
-                            explosion_sound.play()
-                            self.laserY = 640
-                            self.laser_state = "ready"
-                            self.hp_value -= 10
-
-                            if self.hp_value == 0:
-                                self.enemyY[i] = 2000
-                                game_over = True
-
-                        self.enemy(self.enemyX[i], self.enemyY[i], i)
-
-                    if self.laserY <= 0:
+                    collision = self.isCollision(self.enemyX[i], self.enemyY[i], self.laserX, self.laserY)
+                    if collision:
+                        explosion_sound = mixer.Sound('explosion.wav')
+                        explosion_sound.play()
                         self.laserY = 640
                         self.laser_state = "ready"
+                        self.hp_value -= 10
 
-                    if self.laser_state == "fire":
-                        self.fire_laser(self.laserX, self.laserY)
-                        self.laserY -= self.laserY_change
+                        if self.hp_value == 0:
+                            self.enemyY[i] = 2000
+                            self.game_state = "victory"
+                            self.text_box.set_text(self.victory_text)
 
-                    for bullet in self.enemy_bullets:
-                        bullet[1] += self.bulletY_change
-                        self.screen.blit(self.enemy_bullet_img, (bullet[0], bullet[1]))
-                        collision2 = self.isCollision2(self.playerX, self.playerY, bullet[0], bullet[1])
-                        if collision2:
-                            explosion_sound = mixer.Sound('explosion.wav')
-                            explosion_sound.play()
-                            self.enemy_bullets.remove(bullet)
-                            self.hp_self -= 1
-                            if self.hp_self == 0:
-                                game_over = True
+                    self.enemy(self.enemyX[i], self.enemyY[i], i)
 
-                        if bullet[1] >= 800:
-                            self.enemy_bullets.remove(bullet)
+                if self.laserY <= 0:
+                    self.laserY = 640
+                    self.laser_state = "ready"
 
-                    self.player(self.playerX, self.playerY)
-                    self.show_hp(self.textX, self.textY)
-                else:
-                    self.draw_pause_menu()
-                    self.handle_pause_input()
+                if self.laser_state == "fire":
+                    self.fire_laser(self.laserX, self.laserY)
+                    self.laserY -= self.laserY_change
 
-            else:
-                self.game_over_text()
+                for bullet in self.enemy_bullets:
+                    bullet[1] += self.bulletY_change
+                    self.screen.blit(self.enemy_bullet_img, (bullet[0], bullet[1]))
+                    collision2 = self.isCollision2(self.playerX, self.playerY, bullet[0], bullet[1])
+                    if collision2:
+                        explosion_sound = mixer.Sound('explosion.wav')
+                        explosion_sound.play()
+                        self.enemy_bullets.remove(bullet)
+                        self.hp_self -= 1
+                        if self.hp_self == 0:
+                            self.game_state = "defeat"
+                            self.text_box.set_text(self.defeat_text)
+
+                    if bullet[1] >= 800:
+                        self.enemy_bullets.remove(bullet)
+
+                self.player(self.playerX, self.playerY)
+                self.show_hp(self.textX, self.textY)
+
+            elif self.game_state == "victory":
+                congrats_text = self.font.render("CONGRATULATIONS", True, (255, 255, 255))
+                congrats_rect = congrats_text.get_rect(center=(600, 300))
+                self.screen.blit(congrats_text, congrats_rect)
+
+                retry_text = self.font.render("Press R to Retry", True, (255, 255, 255))
+                quit_text = self.font.render("Press Q to Quit", True, (255, 255, 255))
+                retry_rect = retry_text.get_rect(center=(600, 400))
+                quit_rect = quit_text.get_rect(center=(600, 450))
+                self.screen.blit(retry_text, retry_rect)
+                self.screen.blit(quit_text, quit_rect)
+
+                self.text_box.update()
+                self.text_box.draw(self.screen)
+
+            elif self.game_state == "defeat":
+                game_over_text = self.over_font.render("GAME OVER", True, (255, 255, 255))
+                game_over_rect = game_over_text.get_rect(center=(600, 300))
+                self.screen.blit(game_over_text, game_over_rect)
+
+                retry_text = self.font.render("Press R to Retry", True, (255, 255, 255))
+                quit_text = self.font.render("Press Q to Quit", True, (255, 255, 255))
+                retry_rect = retry_text.get_rect(center=(600, 400))
+                quit_rect = quit_text.get_rect(center=(600, 450))
+                self.screen.blit(retry_text, retry_rect)
+                self.screen.blit(quit_text, quit_rect)
+
+                self.text_box.update()
+                self.text_box.draw(self.screen)
+
+            if self.paused:
+                self.draw_pause_menu()
+                self.handle_pause_input()
 
             pygame.display.update()
 
         pygame.quit()
-
 
 if __name__ == "__main__":
     game = Sun()
