@@ -1,5 +1,6 @@
 import pygame
 import random
+from pygame import mixer
 
 class Jupiter:
     def __init__(self):
@@ -12,6 +13,22 @@ class Jupiter:
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Balance the Stones")
 
+        # Load background image
+        try:
+            self.background = pygame.image.load('Jupiterbackground.jpg')
+            self.background = pygame.transform.scale(self.background, (self.WIDTH, self.HEIGHT))
+        except pygame.error as e:
+            print(f"Unable to load background image: {e}")
+            self.background = pygame.Surface((self.WIDTH, self.HEIGHT))
+            self.background.fill((0, 0, 0))  # Fill with black if image fails to load
+
+        # Load and play background music
+        try:
+            mixer.music.load('Jupiter.mp3')
+            mixer.music.play(-1)
+        except pygame.error as e:
+            print(f"Unable to load music file: {e}")
+
         # Colors
         self.WHITE = (255, 255, 255)
         self.BLACK = (0, 0, 0)
@@ -21,6 +38,7 @@ class Jupiter:
         self.GOLD = (255, 215, 0)
         self.SILVER = (192, 192, 192)
         self.COPPER = (184, 115, 51)
+        self.PINK = (238, 25, 91, 255)
 
         # Fonts
         self.font = pygame.font.Font(None, 74)
@@ -76,25 +94,25 @@ class Jupiter:
         right_scale_y = 400 + tilt
 
         # Base
-        pygame.draw.rect(self.screen, self.GRAY, (500, 500, 200, 20))
+        pygame.draw.rect(self.screen, self.PINK, (500, 500, 200, 20))
 
         # Left scale
-        pygame.draw.rect(self.screen, self.BLACK, (200, left_scale_y, 200, 20))
-        pygame.draw.rect(self.screen, self.BLACK, (300, left_scale_y - 100, 10, 100))
+        pygame.draw.rect(self.screen, self.PINK, (200, left_scale_y, 200, 20))
+        pygame.draw.rect(self.screen, self.PINK, (300, left_scale_y - 100, 10, 100))
 
         # Right scale
-        pygame.draw.rect(self.screen, self.BLACK, (800, right_scale_y, 200, 20))
-        pygame.draw.rect(self.screen, self.BLACK, (900, right_scale_y - 100, 10, 100))
+        pygame.draw.rect(self.screen, self.PINK, (800, right_scale_y, 200, 20))
+        pygame.draw.rect(self.screen, self.PINK, (900, right_scale_y - 100, 10, 100))
 
         # Center pillar
-        pygame.draw.rect(self.screen, self.BLACK, (590, 300, 20, 200))
+        pygame.draw.rect(self.screen, self.PINK, (590, 300, 20, 200))
 
         # Arms
-        pygame.draw.line(self.screen, self.BLACK, (600, left_scale_y + 10), (300, left_scale_y + 10), 5)
-        pygame.draw.line(self.screen, self.BLACK, (600, right_scale_y + 10), (900, right_scale_y + 10), 5)
+        pygame.draw.line(self.screen, self.PINK, (600, left_scale_y + 10), (300, left_scale_y + 10), 5)
+        pygame.draw.line(self.screen, self.PINK, (600, right_scale_y + 10), (900, right_scale_y + 10), 5)
 
         # Balance line
-        pygame.draw.line(self.screen, self.RED, (600, left_scale_y + 10), (600, right_scale_y + 10), 2)
+        pygame.draw.line(self.screen, self.BLACK, (600, left_scale_y + 10), (600, right_scale_y + 10), 2)
 
     def reset_game(self):
         self.left_weight = 0
@@ -206,7 +224,8 @@ class Jupiter:
                     if self.current_stone and self.current_stone.dragging:
                         self.current_stone.x, self.current_stone.y = event.pos
 
-            self.screen.fill(self.WHITE)
+            # Draw background first
+            self.screen.blit(self.background, (0, 0))
 
             if self.paused:
                 self.pause_menu()
@@ -248,13 +267,14 @@ class Jupiter:
 
                 self.screen.blit(result_text, (self.WIDTH // 2 - result_text.get_width() // 2, self.HEIGHT // 2 - 50))
 
-                retry_text = self.small_font.render("Press 'R' to retry or 'Q' to quit", True, self.GREEN)
+                retry_text = self.small_font.render("Press 'R' to retry 'Q' to quit", True, self.GREEN)
                 self.screen.blit(retry_text, (self.WIDTH // 2 - result_text.get_width() // 2, self.HEIGHT // 2 + 50))
 
             pygame.display.flip()
             clock.tick(30)
 
         pygame.quit()
+
 
 if __name__ == "__main__":
     game = Jupiter()
