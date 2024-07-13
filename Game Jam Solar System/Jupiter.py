@@ -1,6 +1,46 @@
 import pygame
 import random
 from pygame import mixer
+import textwrap
+
+
+class TextBox:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = ""
+        self.rendered_text = []
+        self.text_content = []
+        self.reveal_index = 0
+        self.line_spacing = 5
+        self.font = pygame.font.Font(None, 32)
+
+    def set_text(self, text):
+        self.text = text
+        self.rendered_text = []
+        self.text_content = []
+        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        for line in wrapped_text:
+            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
+            self.text_content.append(line)
+        self.reveal_index = 0
+
+    def update(self):
+        self.reveal_index += 1
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, (0, 0, 0), self.rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
+
+        y = self.rect.top + 10
+        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
+            x = self.rect.left + 10
+            if i * len(content) < self.reveal_index:
+                surface.blit(line, (x, y))
+                y += line.get_height() + self.line_spacing
+
+    def is_finished(self):
+        return self.reveal_index >= sum(len(line) for line in self.text_content)
+
 
 class Jupiter:
     def __init__(self):
@@ -28,6 +68,12 @@ class Jupiter:
             mixer.music.play(-1)
         except pygame.error as e:
             print(f"Unable to load music file: {e}")
+
+        self.text_box = TextBox(50, 600, 1100, 150)
+        self.game_state = "intro"
+        self.intro_text = "Welcome to Jupiter! Your mission is to use the scale to find out the weights of the stones."
+        self.victory_text = "Congratulations! You've successfully completed the Jupiter stage!\n Obtained the Libra gem"
+        self.defeat_text = "Mission failed. Is maths too hard for you? Try again!"
 
         # Colors
         self.WHITE = (255, 255, 255)
@@ -149,14 +195,22 @@ class Jupiter:
         running = True
         clock = pygame.time.Clock()
 
+        self.text_box.set_text(self.intro_text)
+
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                elif event.type == pygame.KEYDOWN:
+
+                if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.paused = not self.paused
-                    if self.paused:
+                    elif self.game_state == "intro" and event.key == pygame.K_RETURN:
+                        if self.text_box.is_finished():
+                            self.game_state = "playing"
+                        else:
+                            self.text_box.reveal_index = sum(len(line) for line in self.text_box.text_content)
+                    elif self.paused:
                         if event.key == pygame.K_r:
                             self.paused = False
                         elif event.key == pygame.K_t:
@@ -165,17 +219,24 @@ class Jupiter:
                         elif event.key == pygame.K_q:
                             pygame.mixer.music.stop()
                             return "main_menu"
-                    else:
+                    elif self.game_state == "playing":
                         if event.key == pygame.K_RETURN:
                             if self.entering_guesses:
                                 # Check if the guesses are correct
-                                if (self.gold_guess.isdigit() and self.silver_guess.isdigit() and self.copper_guess.isdigit() and
-                                    int(self.gold_guess) == self.gold_weight and int(self.silver_guess) == self.silver_weight and int(self.copper_guess) == self.copper_weight):
+                                if (
+                                        self.gold_guess.isdigit() and self.silver_guess.isdigit() and self.copper_guess.isdigit() and
+                                        int(self.gold_guess) == self.gold_weight and int(
+                                    self.silver_guess) == self.silver_weight and int(
+                                    self.copper_guess) == self.copper_weight):
                                     self.game_over = True
                                     self.correct = True
+                                    self.game_state = "victory"
+                                    self.text_box.set_text(self.victory_text)
                                 else:
                                     self.game_over = True
                                     self.correct = False
+                                    self.game_state = "defeat"
+                                    self.text_box.set_text(self.defeat_text)
                             else:
                                 self.entering_guesses = True
                         elif event.key == pygame.K_BACKSPACE and self.entering_guesses:
@@ -195,16 +256,18 @@ class Jupiter:
                         elif event.key == pygame.K_r and self.game_over:
                             # Restart the game
                             self.reset_game()
+                            self.game_state = "intro"
+                            self.text_box.set_text(self.intro_text)
                         elif event.key == pygame.K_q and self.game_over:
                             pygame.mixer.music.stop()
                             return "main_menu"
-                elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over and not self.entering_guesses and not self.paused:
+                elif event.type == pygame.MOUSEBUTTONDOWN and self.game_state == "playing" and not self.game_over and not self.entering_guesses and not self.paused:
                     for stone in self.stones:
                         if stone.is_mouse_on_stone(event.pos):
                             stone.dragging = True
                             self.current_stone = stone
                             break
-                elif event.type == pygame.MOUSEBUTTONUP and not self.game_over and not self.entering_guesses and not self.paused:
+                elif event.type == pygame.MOUSEBUTTONUP and self.game_state == "playing" and not self.game_over and not self.entering_guesses and not self.paused:
                     if self.current_stone:
                         if self.current_stone.side == "left":
                             self.left_weight -= self.current_stone.weight
@@ -229,37 +292,41 @@ class Jupiter:
             # Draw background first
             self.screen.blit(self.background, (0, 0))
 
-            if self.paused:
+            if self.game_state == "intro":
+                self.text_box.update()
+                self.text_box.draw(self.screen)
+            elif self.paused:
                 self.pause_menu()
-            elif not self.entering_guesses and not self.game_over:
-                pygame.draw.rect(self.screen, self.GOLD, (50, 650, 100, 100))
-                pygame.draw.rect(self.screen, self.SILVER, (150, 650, 100, 100))
-                pygame.draw.rect(self.screen, self.COPPER, (250, 650, 100, 100))
+            elif self.game_state == "playing":
+                if not self.entering_guesses and not self.game_over:
+                    pygame.draw.rect(self.screen, self.GOLD, (50, 650, 100, 100))
+                    pygame.draw.rect(self.screen, self.SILVER, (150, 650, 100, 100))
+                    pygame.draw.rect(self.screen, self.COPPER, (250, 650, 100, 100))
 
-                self.draw_scales(self.left_weight, self.right_weight)
+                    self.draw_scales(self.left_weight, self.right_weight)
 
-                for stone in self.stones:
-                    stone.draw(self.screen)
-            elif self.entering_guesses:
-                result_text = self.font.render("Guess the weights!", True, self.BLACK)
-                self.screen.blit(result_text, (self.WIDTH // 2 - result_text.get_width() // 2, 50))
+                    for stone in self.stones:
+                        stone.draw(self.screen)
+                elif self.entering_guesses:
+                    result_text = self.font.render("Guess the weights!", True, self.BLACK)
+                    self.screen.blit(result_text, (self.WIDTH // 2 - result_text.get_width() // 2, 50))
 
-                gold_text = self.font.render(f"Gold: {self.gold_guess}", True, self.GOLD)
-                self.screen.blit(gold_text, (self.WIDTH // 2 - gold_text.get_width() // 2, 200))
+                    gold_text = self.font.render(f"Gold: {self.gold_guess}", True, self.GOLD)
+                    self.screen.blit(gold_text, (self.WIDTH // 2 - gold_text.get_width() // 2, 200))
 
-                silver_text = self.font.render(f"Silver: {self.silver_guess}", True, self.SILVER)
-                self.screen.blit(silver_text, (self.WIDTH // 2 - silver_text.get_width() // 2, 300))
+                    silver_text = self.font.render(f"Silver: {self.silver_guess}", True, self.SILVER)
+                    self.screen.blit(silver_text, (self.WIDTH // 2 - silver_text.get_width() // 2, 300))
 
-                copper_text = self.font.render(f"Copper: {self.copper_guess}", True, self.COPPER)
-                self.screen.blit(copper_text, (self.WIDTH // 2 - silver_text.get_width() // 2, 400))
+                    copper_text = self.font.render(f"Copper: {self.copper_guess}", True, self.COPPER)
+                    self.screen.blit(copper_text, (self.WIDTH // 2 - silver_text.get_width() // 2, 400))
 
-                if self.gold_guess and self.silver_guess and self.copper_guess:
-                    submit_text = self.small_font.render("Press Enter to submit your guess", True, self.BLACK)
-                    self.screen.blit(submit_text, (self.WIDTH // 2 - submit_text.get_width() // 2, 500))
+                    if self.gold_guess and self.silver_guess and self.copper_guess:
+                        submit_text = self.small_font.render("Press Enter to submit your guess", True, self.BLACK)
+                        self.screen.blit(submit_text, (self.WIDTH // 2 - submit_text.get_width() // 2, 500))
 
-            if self.game_over:
+            elif self.game_state in ["victory", "defeat"]:
                 overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
-                overlay.fill(self.WHITE)
+                overlay.fill((255, 255, 255, 180))
                 self.screen.blit(overlay, (0, 0))
 
                 if self.correct:
@@ -267,12 +334,26 @@ class Jupiter:
                 else:
                     result_text = self.font.render("Wrong guesses! Try again.", True, self.RED)
 
-                self.screen.blit(result_text, (self.WIDTH // 2 - result_text.get_width() // 2, self.HEIGHT // 2 - 50))
+                self.screen.blit(result_text,(self.WIDTH // 2 - result_text.get_width() // 2, self.HEIGHT // 2 - 100))
+
+                self.text_box.update()
+                self.text_box.draw(self.screen)
 
                 retry_text = self.small_font.render("Press 'R' to retry 'Q' to quit", True, self.GREEN)
-                self.screen.blit(retry_text, (self.WIDTH // 2 - result_text.get_width() // 2, self.HEIGHT // 2 + 50))
+                self.screen.blit(retry_text,(self.WIDTH // 2 - retry_text.get_width() // 2, self.HEIGHT // 2 + 150))
+
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_r:
+                            self.reset_game()
+                            self.game_state = "intro"
+                            self.text_box.set_text(self.intro_text)
+                        elif event.key == pygame.K_q:
+                            pygame.mixer.music.stop()
+                            return "main_menu"
 
             pygame.display.flip()
+
             clock.tick(30)
 
         pygame.quit()

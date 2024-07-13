@@ -1,5 +1,44 @@
 import pygame
 import random
+import textwrap
+
+class TextBox:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = ""
+        self.rendered_text = []
+        self.text_content = []
+        self.reveal_index = 0
+        self.line_spacing = 5
+        self.font = pygame.font.Font(None, 32)
+
+    def set_text(self, text):
+        self.text = text
+        self.rendered_text = []
+        self.text_content = []
+        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        for line in wrapped_text:
+            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
+            self.text_content.append(line)
+        self.reveal_index = 0
+
+    def update(self):
+        self.reveal_index += 1
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, (0, 0, 0), self.rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
+
+        y = self.rect.top + 10
+        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
+            x = self.rect.left + 10
+            if i * len(content) < self.reveal_index:
+                surface.blit(line, (x, y))
+                y += line.get_height() + self.line_spacing
+
+    def is_finished(self):
+        return self.reveal_index >= sum(len(line) for line in self.text_content)
+
 
 class Venus:
     def __init__(self):
@@ -54,6 +93,11 @@ class Venus:
         pygame.mixer.music.set_volume(0.1)  # Set initial volume (0.0 to 1.0)
         pygame.mixer.music.play(-1)  # -1 makes the music loop indefinitely
 
+        self.text_box = TextBox(50, 600, 1100, 150)
+        self.game_state = "intro"
+        self.intro_text = "Welcome to Venus! Your mission is to match the cards with same zodiac name"
+        self.victory_text = "Congratulations! You've successfully matched all the cards! Obtained the Gemini and the Virgo gem"
+
     def create_cards(self):
         card_values = self.ZODIAC_SIGNS * 2
         random.shuffle(card_values)
@@ -106,17 +150,15 @@ class Venus:
             self.WIDTH // 2 - congrats_text.get_width() // 2,
             self.HEIGHT // 2 - congrats_text.get_height() // 2))
 
-        next_level_text = self.font.render("Press N for Next Level", True, self.WHITE)
-        self.screen.blit(next_level_text, (
-            self.WIDTH // 2 - next_level_text.get_width() // 2,
-            self.HEIGHT // 2 - next_level_text.get_height() // 2 + 50))
+        retry_text = self.font.render("Press R to Retry", True, self.WHITE)
+        self.screen.blit(retry_text, (
+            self.WIDTH // 2 - retry_text.get_width() // 2,
+            self.HEIGHT // 2 - retry_text.get_height() // 2 + 50))
 
-        restart_level_text = self.font.render("Press R to Restart Level", True, self.WHITE)
-        self.screen.blit(restart_level_text, (
-            self.WIDTH // 2 - restart_level_text.get_width() // 2,
-            self.HEIGHT // 2 - restart_level_text.get_height() // 2 + 100))
-
-        pygame.display.flip()
+        quit_text = self.font.render("Press Q to Quit", True, self.WHITE)
+        self.screen.blit(quit_text, (
+            self.WIDTH // 2 - quit_text.get_width() // 2,
+            self.HEIGHT // 2 - quit_text.get_height() // 2 + 100))
 
     def pause_menu(self):
         overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
@@ -140,6 +182,8 @@ class Venus:
         clock = pygame.time.Clock()
         running = True
 
+        self.text_box.set_text(self.intro_text)
+
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -147,6 +191,11 @@ class Venus:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.paused = not self.paused
+                    elif self.game_state == "intro" and event.key == pygame.K_RETURN:
+                        if self.text_box.is_finished():
+                            self.game_state = "playing"
+                        else:
+                            self.text_box.reveal_index = sum(len(line) for line in self.text_box.text_content)
                     if self.paused:
                         if event.key == pygame.K_r:
                             self.paused = False
@@ -160,7 +209,7 @@ class Venus:
                         elif event.key == pygame.K_q:
                             pygame.mixer.music.stop()
                             return "main_menu"
-                elif not self.paused:
+                elif not self.paused and self.game_state == "playing":
                     if event.type == pygame.MOUSEBUTTONDOWN and len(self.flipped_cards) < 2:
                         pos = pygame.mouse.get_pos()
                         for card in self.cards:
@@ -182,7 +231,10 @@ class Venus:
 
             self.screen.blit(self.background, (0, 0))
 
-            if self.paused:
+            if self.game_state == "intro":
+                self.text_box.update()
+                self.text_box.draw(self.screen)
+            elif self.paused:
                 self.pause_menu()
             elif not self.level_complete:
                 # Draw cards
@@ -197,25 +249,25 @@ class Venus:
                 # Check for game over
                 if self.matched_pairs == 6:
                     self.level_complete = True
+                    self.game_state = "victory"
+                    self.text_box.set_text(self.victory_text)
 
                 # Control the game speed
                 clock.tick(30)
             else:
                 self.show_congratulations()
+                self.text_box.update()
+                self.text_box.draw(self.screen)
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         running = False
                     elif event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_n:  # Proceed to next level
+                        if event.key == pygame.K_r:  # Retry current level
                             self.level_complete = False
                             self.matched_pairs = 0
                             self.attempts = 0
                             self.cards = self.create_cards()
-                        elif event.key == pygame.K_r:  # Restart current level
-                            self.level_complete = False
-                            self.matched_pairs = 0
-                            self.attempts = 0
-                            self.cards = self.create_cards()
+                            self.game_state = "playing"
                         elif event.key == pygame.K_q:  # Quit game
                             pygame.mixer.music.stop()
                             return "main_menu"

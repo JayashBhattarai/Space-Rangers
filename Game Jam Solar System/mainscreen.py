@@ -183,6 +183,8 @@ def main_screen():
                             if result == "main_menu":
                                 mixer.music.stop()
                                 current_screen = "main_menu"
+                                mixer.music.load('main.mp3')
+                                mixer.music.play(-1)
                                 selected_option = 0
                         elif selected_option == 6:
                             print("Level 7 selected")
