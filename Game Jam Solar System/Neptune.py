@@ -106,7 +106,7 @@ class Neptune:
 
     def game_over_screen(self):
         mixer.music.stop()  # Stop BGM
-        self.screen.fill(self.BLACK)
+        self.screen.fill(self.SKY)
         self.draw_text("Game Over", 74, self.WIDTH // 2 - 100, self.HEIGHT // 2 - 50, self.WHITE)
         self.draw_text("Press R to restart or Q to quit", 36, self.WIDTH // 2 - 150, self.HEIGHT // 2 + 50, self.WHITE)
         pygame.display.flip()
@@ -180,7 +180,8 @@ class Neptune:
                             self.reset_game()
                             mixer.music.play(-1)  # Restart BGM
                         elif event.key == pygame.K_q:
-                            running = False
+                            pygame.mixer.music.stop()
+                            return "main_menu"  # Return to main menu
                     elif event.key == pygame.K_ESCAPE:
                         if self.paused:
                             if self.selected_option == 0:  # Resume
@@ -189,7 +190,8 @@ class Neptune:
                                 self.reset_game()
                                 mixer.music.play(-1)  # Restart BGM
                             elif self.selected_option == 2:  # Quit
-                                running = False
+                                pygame.mixer.music.stop()
+                                return "main_menu"  # Return to main menu
                         else:
                             self.paused = not self.paused
                     elif self.paused:
@@ -204,7 +206,8 @@ class Neptune:
                                 self.reset_game()
                                 mixer.music.play(-1)  # Restart BGM
                             elif self.selected_option == 2:  # Quit
-                                running = False
+                                pygame.mixer.music.stop()
+                                return "main_menu"  # Return to main menu
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     # Handle mouse click for pause menu options
                     if self.paused:
@@ -221,7 +224,8 @@ class Neptune:
                                     self.reset_game()
                                     mixer.music.play(-1)  # Restart BGM
                                 elif idx == 2:  # Quit
-                                    running = False
+                                    pygame.mixer.music.stop()
+                                    return "main_menu"  # Return to main menu
 
             if not self.game_over and not self.game_won and not self.paused:
                 keys = pygame.key.get_pressed()
@@ -282,9 +286,6 @@ class Neptune:
                 self.draw_text(f"Coins: {self.coins_collected}/10", 24, 10, 10, self.WHITE)
                 self.draw_text(f"Distance: {int(self.distance_travelled)} m", 24, 10, 40, self.WHITE)
 
-                # Draw finish line
-                # pygame.draw.line(self.screen, self.GREEN, (self.finish_line_distance, 0), (self.finish_line_distance, self.HEIGHT), 2)
-
             if self.game_over:
                 self.game_over_screen()
             elif self.game_won:
@@ -297,6 +298,7 @@ class Neptune:
             self.clock.tick(60)
 
         pygame.quit()
+        return "main_menu"  # Return to main menu when the game loop ends
 
 if __name__ == "__main__":
     game = Neptune()

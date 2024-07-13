@@ -167,8 +167,8 @@ class Saturn:
                         elif self.selected_option == 1:  # Retry
                             self.reset_game()
                         elif self.selected_option == 2:  # Quit
-                            pygame.quit()
-                            sys.exit()
+                            pygame.mixer.music.stop()
+                            return "main_menu"
 
                 if self.congratulations_active:
                     if event.key == pygame.K_UP:
@@ -181,8 +181,8 @@ class Saturn:
                         if self.congratulations_selected == 0:  # Retry
                             self.reset_game()
                         elif self.congratulations_selected == 1:  # Quit
-                            pygame.quit()
-                            sys.exit()
+                            pygame.mixer.music.stop()
+                            return "main_menu"
 
     def reset_game(self):
         random.shuffle(self.grid)
@@ -206,6 +206,13 @@ class Saturn:
 
             if self.pause_menu_active and not self.congratulations_active:
                 self.draw_pause_menu()
+
+            if self.pause_menu_active:
+                self.draw_pause_menu()
+                result = self.handle_events()
+                if result == "main_menu":
+                    running = False
+                    return "main_menu"
 
             pygame.display.flip()
             clock.tick(30)

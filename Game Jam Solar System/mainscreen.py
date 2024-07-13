@@ -1,5 +1,5 @@
 import sys
-
+from pygame import mixer
 import pygame
 
 pygame.init()
@@ -14,16 +14,23 @@ pygame.font.init()
 TITLE_FONT = pygame.font.Font(None, 74)
 MENU_FONT = pygame.font.Font(None, 50)
 
+background = pygame.image.load("background.png")
+
+# Load and play background music
+mixer.music.load('main.mp3')
+mixer.music.play(-1)
+
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Main Menu")
 
 main_menu_options = ["Start Game", "Space Navigation", "Quit"]
-level_options = ["Stage 1 Earth", "Stage 2 Mars", "Stage 3 Venus", "Stage 4 Jupiter", "Stage 5 Saturn", "Stage 6 Uranus", "Stage 7 Neptune", "Stage 8 Mercury", "Stage 9 Sun"]
+level_options = ["Stage 1 Earth", "Stage 2 Mars", "Stage 3 Venus", "Stage 4 Jupiter", "Stage 5 Saturn",
+                 "Stage 6 Uranus", "Stage 7 Neptune", "Stage 8 Mercury", "Stage 9 Sun"]
 selected_option = 0
 
 
 def draw_main_menu():
-    screen.fill(BLACK)
+    screen.blit(background, (0, 0))
 
     title_surface = TITLE_FONT.render("SPACE RANGERS", True, WHITE)
     title_rect = title_surface.get_rect(center=(WIDTH / 2, HEIGHT / 4))
@@ -40,7 +47,7 @@ def draw_main_menu():
 
 
 def draw_level_selection_menu():
-    screen.fill(BLACK)
+    screen.blit(background, (0, 0))
 
     title_surface = TITLE_FONT.render("Level Selection", True, WHITE)
     title_rect = title_surface.get_rect(center=(WIDTH / 2, HEIGHT / 4))
@@ -106,63 +113,116 @@ def main_screen():
                             selected_option = 0  # Reset selected option for level selection
                         elif selected_option == 1:
                             print("SPACE NAVIGATION")
+                            mixer.music.stop()
                             from solarsystem import SolarSystem
                             game = SolarSystem()
                             game.main()
+                            mixer.music.play(-1)
                             selected_option = 0
                         elif selected_option == 2:
                             pygame.quit()
                             sys.exit()
                     elif current_screen == "level_selection":
+                        mixer.music.stop()
                         if selected_option == 0:
                             print("Level 1 selected")
                             from Earth import Earth
                             game = Earth()
-                            game.main()
+                            result = game.main()
+                            mixer.music.load('main.mp3')
+                            mixer.music.play(-1)
                         elif selected_option == 1:
                             print("Level 2 selected")
                             from Mars import Mars
                             game = Mars()
-                            game.main()
+                            result = game.main()
+                            if result == "main_menu":
+                                mixer.music.stop()
+                                current_screen = "main_menu"
+                                mixer.music.load('main.mp3')
+                                mixer.music.play(-1)
+                                selected_option = 0
                         elif selected_option == 2:
                             print("Level 3 selected")
                             from Venus import Venus
                             game = Venus()
-                            game.main()
+                            result = game.main()
+                            if result == "main_menu":
+                                mixer.music.stop()
+                                current_screen = "main_menu"
+                                mixer.music.load('main.mp3')
+                                mixer.music.play(-1)
+                                selected_option = 0
                         elif selected_option == 3:
                             print("Level 4 selected")
                             from Jupiter import Jupiter
                             game = Jupiter()
-                            game.main()
+                            result = game.main()
+                            if result == "main_menu":
+                                mixer.music.stop()
+                                current_screen = "main_menu"
+                                mixer.music.load('main.mp3')
+                                mixer.music.play(-1)
+                                selected_option = 0
                         elif selected_option == 4:
                             print("Level 5 selected")
                             from Saturn import Saturn
                             game = Saturn()
-                            game.run()
+                            result = game.run()
+                            if result == "main_menu":
+                                mixer.music.stop()
+                                current_screen = "main_menu"
+                                mixer.music.load('main.mp3')
+                                mixer.music.play(-1)
+                                selected_option = 0
                         elif selected_option == 5:
                             print("Level 6 selected")
                             from Uranus import Uranus
                             game = Uranus()
-                            game.main()
+                            result = game.main()
+                            if result == "main_menu":
+                                mixer.music.stop()
+                                current_screen = "main_menu"
+                                selected_option = 0
                         elif selected_option == 6:
                             print("Level 7 selected")
                             from Neptune import Neptune
                             game = Neptune()
-                            game.main()
+                            result = game.main()
+                            if result == "main_menu":
+                                mixer.music.stop()
+                                current_screen = "main_menu"
+                                mixer.music.load('main.mp3')
+                                mixer.music.play(-1)
+                                selected_option = 0
                         elif selected_option == 7:
                             print("Level 8 selected")
                             from Mercury import Mercury
                             game = Mercury()
-                            game.main()
+                            result = game.main()
+                            if result == "main_menu":
+                                mixer.music.stop()
+                                current_screen = "main_menu"
+                                mixer.music.load('main.mp3')
+                                mixer.music.play(-1)
+                                selected_option = 0
                         elif selected_option == 8:
                             print("Level 9 selected")
                             from Sun import Sun
                             game = Sun()
-                            game.main()
+                            result = game.main()
+                            if result == "main_menu":
+                                mixer.music.stop()
+                                current_screen = "main_menu"
+                                mixer.music.load('main.mp3')
+                                mixer.music.play(-1)
+                                selected_option = 0
 
                 elif event.key == pygame.K_BACKSPACE:
                     if current_screen == "level_selection":
                         current_screen = "main_menu"
+                        mixer.music.load('main.mp3')
+                        mixer.music.play(-1)
                         selected_option = 0  # Reset selected option for main menu
 
         if current_screen == "main_menu":
@@ -173,4 +233,3 @@ def main_screen():
 
 if __name__ == "__main__":
     main_screen()
-

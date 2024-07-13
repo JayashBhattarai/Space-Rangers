@@ -163,7 +163,8 @@ class Jupiter:
                             self.reset_game()
                             self.paused = False
                         elif event.key == pygame.K_q:
-                            running = False
+                            pygame.mixer.music.stop()
+                            return "main_menu"
                     else:
                         if event.key == pygame.K_RETURN:
                             if self.entering_guesses:
@@ -195,7 +196,8 @@ class Jupiter:
                             # Restart the game
                             self.reset_game()
                         elif event.key == pygame.K_q and self.game_over:
-                            running = False
+                            pygame.mixer.music.stop()
+                            return "main_menu"
                 elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over and not self.entering_guesses and not self.paused:
                     for stone in self.stones:
                         if stone.is_mouse_on_stone(event.pos):

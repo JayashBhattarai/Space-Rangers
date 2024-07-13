@@ -158,7 +158,8 @@ class Venus:
                             self.level_complete = False
                             self.paused = False
                         elif event.key == pygame.K_q:
-                            running = False
+                            pygame.mixer.music.stop()
+                            return "main_menu"
                 elif not self.paused:
                     if event.type == pygame.MOUSEBUTTONDOWN and len(self.flipped_cards) < 2:
                         pos = pygame.mouse.get_pos()
@@ -216,7 +217,8 @@ class Venus:
                             self.attempts = 0
                             self.cards = self.create_cards()
                         elif event.key == pygame.K_q:  # Quit game
-                            running = False
+                            pygame.mixer.music.stop()
+                            return "main_menu"
 
             pygame.display.flip()
 

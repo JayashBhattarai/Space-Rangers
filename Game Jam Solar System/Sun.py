@@ -170,8 +170,8 @@ class Sun:
                 self.__init__()  # Restart the game
                 self.text_box.set_text(self.intro_text)  # Set the intro text when restarting
             elif self.selected_option == 2:  # Quit
-                pygame.quit()
-                quit()
+                pygame.mixer.music.stop()
+                return "main_menu"
 
     def main(self):
         running = True
@@ -213,11 +213,19 @@ class Sun:
                             self.__init__()
                             self.text_box.set_text(self.intro_text)  # Set the intro text when restarting
                         elif event.key == pygame.K_q:
-                            running = False
+                            pygame.mixer.music.stop()
+                            return "main_menu"
 
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                         self.playerX_change = 0
+
+            if self.paused:
+                self.draw_pause_menu()
+                result = self.handle_pause_input()
+                if result == "main_menu":
+                    running = False
+                    return "main_menu"
 
             if self.game_state == "intro":
                 self.text_box.update()

@@ -8,8 +8,8 @@ class Mars:
         pygame.init()
 
         # Screen dimensions
-        self.screen_width = 800
-        self.screen_height = 600
+        self.screen_width = 1200
+        self.screen_height = 800
 
         # Colors
         self.white = (255, 255, 255)
@@ -115,7 +115,9 @@ class Mars:
                         elif event.key == pygame.K_n:  # Restart game
                             self.reset_game()
                         elif event.key == pygame.K_q:  # Quit game
-                            self.running = False
+                            pygame.mixer.music.stop()
+                            return "main_menu"
+                            # self.running = False
 
             if not self.paused:
                 if not self.game_over and not self.level_complete:

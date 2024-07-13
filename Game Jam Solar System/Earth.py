@@ -203,7 +203,7 @@ class Earth:
                         player_vel = 0
                         self.create_buildings()
                     elif keys[pygame.K_q]:
-                        running = False
+                        return "main_menu"
             else:
                 # Draw pause menu
                 self.draw_pause_menu()
@@ -220,7 +220,7 @@ class Earth:
                     self.create_buildings()
                     self.paused = False
                 elif keys[pygame.K_q]:
-                    running = False
+                    return "main_menu"
 
             # Update the display
             pygame.display.flip()

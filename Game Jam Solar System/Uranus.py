@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+from pygame import mixer
 
 class Uranus:
     def __init__(self):
@@ -11,6 +12,12 @@ class Uranus:
         self.WIDTH, self.HEIGHT = 1200, 800
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Balloon Pop Game")
+
+        # Load background image
+        self.background = pygame.image.load('uranus.jpg')
+
+        # Load pop sound
+        self.pop_sound = pygame.mixer.Sound('pop.mp3')
 
         # Colors
         self.WHITE = (255, 255, 255)
@@ -136,8 +143,6 @@ class Uranus:
         clock = pygame.time.Clock()
 
         while running:
-            self.screen.fill(self.WHITE)
-
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -163,11 +168,13 @@ class Uranus:
                             elif self.selected_option == 1:  # Restart
                                 self.reset_game()
                             elif self.selected_option == 2:  # Quit
-                                running = False
+                                pygame.mixer.music.stop()
+                                return "main_menu"
                         elif event.key == pygame.K_r:
                             self.reset_game()
                         elif event.key == pygame.K_q:
-                            running = False
+                            pygame.mixer.music.stop()
+                            return "main_menu"
                     elif event.key == pygame.K_r and (self.game_over or self.congratulations):
                         self.reset_game()
                     elif event.key == pygame.K_q and (self.game_over or self.congratulations):
@@ -178,6 +185,9 @@ class Uranus:
 
             if not self.paused:
                 if not self.game_over and not self.congratulations:
+                    # Draw background image
+                    self.screen.blit(self.background, (0, 0))
+
                     # Move and draw balloons
                     for balloon in self.balloons:
                         balloon.move()
@@ -192,6 +202,7 @@ class Uranus:
                         balloon = self.check_collision(self.arrow)
                         if balloon:
                             if balloon.color == self.RED:
+                                self.pop_sound.play()  # Play pop sound
                                 self.balloons.remove(balloon)
                                 self.arrow = None
                                 self.player_score += 1
@@ -222,7 +233,7 @@ class Uranus:
                     self.show_congratulations()
 
                 # Draw score
-                score_text = self.small_font.render(f"Score: {self.player_score}/5", True, self.BLACK)
+                score_text = self.small_font.render(f"Score: {self.player_score}/5", True, self.WHITE)
                 self.screen.blit(score_text, (20, 20))
 
             else:

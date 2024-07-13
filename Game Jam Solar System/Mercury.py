@@ -156,12 +156,14 @@ class Mercury:
                         if event.key == pygame.K_t:
                             self.reset_game()
                         if event.key == pygame.K_q:
-                            running = False
+                            pygame.mixer.music.stop()
+                            return "main_menu"
                     elif self.game_completed or self.game_over:
                         if event.key == pygame.K_t:
                             self.reset_game()
                         if event.key == pygame.K_q:
-                            running = False
+                            pygame.mixer.music.stop()
+                            return "main_menu"
                     elif self.show_question:
                         if event.key == pygame.K_UP:
                             self.direction = 1
