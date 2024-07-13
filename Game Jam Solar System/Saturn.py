@@ -1,6 +1,8 @@
 import pygame
 import random
 import sys
+from pygame import mixer
+
 
 class Saturn:
     def __init__(self):
@@ -11,12 +13,16 @@ class Saturn:
         self.HEIGHT = 800
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Alien Jigsaw Puzzle")
+        self.background = pygame.image.load("saturnbackground.jpg")
+        self.background = pygame.transform.scale(self.background, (self.WIDTH, self.HEIGHT))
+
+        mixer.music.load('saturnbgm.mp3')
+        mixer.music.play(-1)
 
         # Colors
         self.WHITE = (255, 255, 255)
         self.BLACK = (0, 0, 0)
         self.GRAY = (169, 169, 169)
-        self.TRANSPARENT = (0, 0, 0, 0)  # Transparent color for overlay
 
         # Load image
         self.alien_image = pygame.image.load('saturn.png')
@@ -40,7 +46,6 @@ class Saturn:
         random.shuffle(self.grid)
         self.dragging_piece = None
         self.game_over = False
-        self.result_text = None
 
         # Centering variables
         self.center_x = (self.WIDTH - self.pieces_per_row * self.piece_size) // 2
@@ -50,6 +55,13 @@ class Saturn:
         self.pause_menu_active = False
         self.selected_option = 0  # 0: Resume, 1: Retry, 2: Quit
         self.pause_menu_font = pygame.font.Font(None, 36)
+
+        # Congratulations screen variables
+        self.congratulations_active = False
+        self.congratulations_font = pygame.font.Font(None, 48)
+        self.options_font = pygame.font.Font(None, 36)
+        self.congratulations_options = ["Retry", "Quit"]
+        self.congratulations_selected = 0
 
     def draw_grid(self):
         for i in range(self.total_pieces):
@@ -68,41 +80,17 @@ class Saturn:
     def check_correct_placement(self):
         return self.grid == list(range(self.total_pieces))
 
-    def draw_congratulations(self):
-        # Clear the screen
-        self.screen.fill(self.WHITE)
-
-        # Draw 'Congratulations!' message
-        congratulations_text = self.pause_menu_font.render("Congratulations!", True, self.BLACK)
-        self.screen.blit(congratulations_text,
-                         (self.WIDTH // 2 - congratulations_text.get_width() // 2,
-                          self.HEIGHT // 2 - congratulations_text.get_height() // 2))
-
-        # Draw retry and quit options
-        retry_text = self.pause_menu_font.render("Retry", True, self.BLACK if self.selected_option != 0 else self.WHITE)
-        quit_text = self.pause_menu_font.render("Quit", True, self.BLACK if self.selected_option != 1 else self.WHITE)
-
-        options_width = max(retry_text.get_width(), quit_text.get_width()) + 40
-        options_height = retry_text.get_height() + quit_text.get_height() + 20
-        options_x = (self.WIDTH - options_width) // 2
-        options_y = self.HEIGHT // 2 + congratulations_text.get_height() // 2 + 20
-
-        pygame.draw.rect(self.screen, self.WHITE, (options_x, options_y, options_width, options_height), 2)
-        self.screen.blit(retry_text, (options_x + 20, options_y + 20))
-        self.screen.blit(quit_text, (options_x + 20, options_y + 20 + retry_text.get_height() + 10))
-
     def draw_pause_menu(self):
-        # Create a translucent overlay
         overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 100))  # 100 alpha for translucency
         self.screen.blit(overlay, (0, 0))
 
-        # Draw pause menu options
-        resume_text = self.pause_menu_font.render("Resume", True, self.WHITE if self.selected_option != 0 else self.BLACK)
+        resume_text = self.pause_menu_font.render("Resume", True,
+                                                  self.WHITE if self.selected_option != 0 else self.BLACK)
         retry_text = self.pause_menu_font.render("Retry", True, self.WHITE if self.selected_option != 1 else self.BLACK)
         quit_text = self.pause_menu_font.render("Quit", True, self.WHITE if self.selected_option != 2 else self.BLACK)
 
-        menu_height = resume_text.get_height() * 3  # Height for all three options
+        menu_height = resume_text.get_height() * 3
         menu_width = max(resume_text.get_width(), retry_text.get_width(), quit_text.get_width()) + 40
 
         menu_x = (self.WIDTH - menu_width) // 2
@@ -113,6 +101,26 @@ class Saturn:
         self.screen.blit(retry_text, (menu_x + 20, menu_y + 20 + resume_text.get_height()))
         self.screen.blit(quit_text, (menu_x + 20, menu_y + 20 + resume_text.get_height() * 2))
 
+    def draw_congratulations(self):
+        self.screen.blit(self.background, (0, 0))  # Draw the background image
+
+        congratulations_text = self.congratulations_font.render("Congratulations! The puzzle is solved.", True,
+                                                                self.WHITE)
+        text_rect = congratulations_text.get_rect(center=(self.WIDTH // 2, self.HEIGHT // 2 - 100))
+        self.screen.blit(congratulations_text, text_rect)
+
+        for i, option in enumerate(self.congratulations_options):
+            color = self.BLACK if self.congratulations_selected == i else self.WHITE
+            option_text = self.options_font.render(option, True, color)
+            text_x = self.WIDTH // 2 - option_text.get_width() // 2
+            text_y = self.HEIGHT // 2 + 50 + i * (option_text.get_height() + 20)
+
+            if self.congratulations_selected == i:
+                rect = option_text.get_rect(center=(self.WIDTH // 2, text_y + option_text.get_height() // 2))
+                pygame.draw.rect(self.screen, self.WHITE, rect.inflate(20, 10))
+
+            self.screen.blit(option_text, (text_x, text_y))
+
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -121,7 +129,7 @@ class Saturn:
             elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over and not self.pause_menu_active:
                 x, y = event.pos
                 if self.center_x <= x < self.center_x + self.pieces_per_row * self.piece_size and \
-                   self.center_y <= y < self.center_y + self.pieces_per_row * self.piece_size:
+                        self.center_y <= y < self.center_y + self.pieces_per_row * self.piece_size:
                     grid_x = (x - self.center_x) // self.piece_size
                     grid_y = (y - self.center_y) // self.piece_size
                     piece_index = grid_y * self.pieces_per_row + grid_x
@@ -129,24 +137,24 @@ class Saturn:
             elif event.type == pygame.MOUSEBUTTONUP and self.dragging_piece is not None and not self.game_over and not self.pause_menu_active:
                 x, y = event.pos
                 if self.center_x <= x < self.center_x + self.pieces_per_row * self.piece_size and \
-                   self.center_y <= y < self.center_y + self.pieces_per_row * self.piece_size:
+                        self.center_y <= y < self.center_y + self.pieces_per_row * self.piece_size:
                     grid_x = (x - self.center_x) // self.piece_size
                     grid_y = (y - self.center_y) // self.piece_size
                     target_index = grid_y * self.pieces_per_row + grid_x
-                    # Swap pieces
-                    self.grid[self.dragging_piece], self.grid[target_index] = self.grid[target_index], self.grid[self.dragging_piece]
+                    self.grid[self.dragging_piece], self.grid[target_index] = self.grid[target_index], self.grid[
+                        self.dragging_piece]
                     self.dragging_piece = None
+
+                    # Check if the puzzle is solved after each move
+                    if self.check_correct_placement():
+                        self.game_over = True
+                        self.congratulations_active = True
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.pause_menu_active = not self.pause_menu_active
-                    self.selected_option = 0
-
-                if not self.game_over and not self.pause_menu_active:
-                    if event.key == pygame.K_RETURN:
-                        # Check if the puzzle is solved
-                        if self.check_correct_placement():
-                            self.game_over = True
+                    if not self.congratulations_active:
+                        self.pause_menu_active = not self.pause_menu_active
+                        self.selected_option = 0
 
                 if self.pause_menu_active:
                     if event.key == pygame.K_UP:
@@ -162,25 +170,41 @@ class Saturn:
                             pygame.quit()
                             sys.exit()
 
+                if self.congratulations_active:
+                    if event.key == pygame.K_UP:
+                        self.congratulations_selected = (self.congratulations_selected - 1) % len(
+                            self.congratulations_options)
+                    elif event.key == pygame.K_DOWN:
+                        self.congratulations_selected = (self.congratulations_selected + 1) % len(
+                            self.congratulations_options)
+                    elif event.key == pygame.K_RETURN:
+                        if self.congratulations_selected == 0:  # Retry
+                            self.reset_game()
+                        elif self.congratulations_selected == 1:  # Quit
+                            pygame.quit()
+                            sys.exit()
+
     def reset_game(self):
         random.shuffle(self.grid)
         self.game_over = False
-        self.result_text = None
+        self.congratulations_active = False
+        self.selected_option = 0
+        self.congratulations_selected = 0
 
     def run(self):
         clock = pygame.time.Clock()
         while True:
             self.handle_events()
 
-            self.screen.fill(self.WHITE)
+            self.screen.blit(self.background, (0, 0))
 
-            self.draw_reference_image()
-            self.draw_grid()
-
-            if self.game_over:
+            if self.congratulations_active:
                 self.draw_congratulations()
+            else:
+                self.draw_reference_image()
+                self.draw_grid()
 
-            if self.pause_menu_active:
+            if self.pause_menu_active and not self.congratulations_active:
                 self.draw_pause_menu()
 
             pygame.display.flip()
