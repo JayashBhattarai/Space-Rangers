@@ -1,11 +1,12 @@
 import pygame
 import random
-
+from pygame import mixer
 
 class Earth:
     def __init__(self):
-        # Initialize Pygame
+        # Initialize Pygame and Mixer
         pygame.init()
+        mixer.init()
 
         # Set up the display
         self.WIDTH = 1200
@@ -41,6 +42,10 @@ class Earth:
         self.score = 0
         self.game_over = False
         self.paused = False
+
+        # Load sounds
+        self.jump_sound = mixer.Sound('jumpshort.mp3')
+        self.explosion_sound = mixer.Sound('explosion.wav')
 
         # Create initial buildings
         self.create_buildings()
@@ -109,17 +114,16 @@ class Earth:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.paused = not self.paused
+                    if event.key == pygame.K_SPACE:
+                        # Play jump sound
+                        self.jump_sound.play()
+                        player_vel = self.player_jump
 
             if not self.paused:
                 if not self.game_over:
                     # Apply gravity
                     player_vel += self.gravity
                     self.player_y += player_vel
-
-                    # Jump
-                    keys = pygame.key.get_pressed()
-                    if keys[pygame.K_SPACE]:
-                        player_vel = self.player_jump
 
                     # Move buildings
                     for building in self.buildings:
@@ -139,10 +143,14 @@ class Earth:
                         if (self.player_x + self.player_width > building['x'] and
                                 self.player_x < building['x'] + self.building_width and
                                 self.player_y + self.player_height > building['y']):
+                            # Play explosion sound
+                            self.explosion_sound.play()
                             self.game_over = True
 
                     # Check for hitting the ground or going too high
                     if self.player_y + self.player_height > self.HEIGHT or self.player_y < 0:
+                        # Play explosion sound
+                        self.explosion_sound.play()
                         self.game_over = True
 
                     # Clear the screen
@@ -222,7 +230,6 @@ class Earth:
 
         # Quit the game
         pygame.quit()
-
 
 if __name__ == "__main__":
     game = Earth()

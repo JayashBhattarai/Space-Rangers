@@ -61,6 +61,11 @@ class Mars:
         # Pause state
         self.paused = False
 
+        # Initialize Pygame mixer
+        pygame.mixer.init()
+        pygame.mixer.music.load('marsbgm.mp3')
+        pygame.mixer.music.play(-1)  # Play music indefinitely
+
     def show_text(self, text, x, y, font_size=74):
         font = pygame.font.Font(None, font_size)
         text_surface = font.render(text, True, self.white)

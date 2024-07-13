@@ -1,7 +1,6 @@
 import pygame
 import random
 
-
 class Venus:
     def __init__(self):
         # Initialize Pygame
@@ -48,6 +47,12 @@ class Venus:
         self.font = pygame.font.Font(None, 36)
         self.card_font = pygame.font.Font(None, 24)
         self.congrats_font = pygame.font.Font(None, 48)
+
+        # Initialize mixer and load background music
+        pygame.mixer.init()
+        pygame.mixer.music.load('venus.mp3')
+        pygame.mixer.music.set_volume(0.1)  # Set initial volume (0.0 to 1.0)
+        pygame.mixer.music.play(-1)  # -1 makes the music loop indefinitely
 
     def create_cards(self):
         card_values = self.ZODIAC_SIGNS * 2
@@ -215,8 +220,8 @@ class Venus:
 
             pygame.display.flip()
 
+        pygame.mixer.music.stop()  # Stop music when quitting the game
         pygame.quit()
-
 
 if __name__ == "__main__":
     game = Venus()

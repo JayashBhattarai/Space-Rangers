@@ -283,7 +283,7 @@ class Neptune:
                 self.draw_text(f"Distance: {int(self.distance_travelled)} m", 24, 10, 40, self.WHITE)
 
                 # Draw finish line
-                pygame.draw.line(self.screen, self.GREEN, (self.finish_line_distance, 0), (self.finish_line_distance, self.HEIGHT), 2)
+                # pygame.draw.line(self.screen, self.GREEN, (self.finish_line_distance, 0), (self.finish_line_distance, self.HEIGHT), 2)
 
             if self.game_over:
                 self.game_over_screen()
