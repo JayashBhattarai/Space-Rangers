@@ -1,5 +1,6 @@
 import pygame
 import random
+from pygame import mixer
 
 class Neptune:
     def __init__(self):
@@ -20,6 +21,9 @@ class Neptune:
         self.RED = (255, 0, 0)
         self.GRAY = (169, 169, 169)
         self.GREEN = (0, 255, 0)
+
+        # Load background music
+        mixer.music.load('neptunebgm.mp3')
 
         # Player settings
         self.player_width, self.player_height = 50, 30
@@ -64,7 +68,6 @@ class Neptune:
         # Load images
         self.player_img = pygame.image.load("submarine.png")
         self.player_width, self.player_height = 100, 60  # Adjust dimensions as needed
-
         self.player_img = pygame.transform.scale(self.player_img, (self.player_width, self.player_height))
 
         self.fish_img = pygame.image.load("fish.png")
@@ -102,15 +105,22 @@ class Neptune:
         self.screen.blit(text_surface, (x, y))
 
     def game_over_screen(self):
+        mixer.music.stop()  # Stop BGM
         self.screen.fill(self.BLACK)
         self.draw_text("Game Over", 74, self.WIDTH // 2 - 100, self.HEIGHT // 2 - 50, self.WHITE)
         self.draw_text("Press R to restart or Q to quit", 36, self.WIDTH // 2 - 150, self.HEIGHT // 2 + 50, self.WHITE)
         pygame.display.flip()
 
     def game_won_screen(self):
-        self.screen.fill(self.BLACK)
+        # Draw semi-transparent overlay
+        overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))  # Translucent black
+        self.screen.blit(overlay, (0, 0))
+
+        # Draw game won message
         self.draw_text("Congratulations!", 74, self.WIDTH // 2 - 150, self.HEIGHT // 2 - 50, self.WHITE)
         self.draw_text("Press R to restart or Q to quit", 36, self.WIDTH // 2 - 150, self.HEIGHT // 2 + 50, self.WHITE)
+
         pygame.display.flip()
 
     def draw_pause_menu(self):
@@ -135,7 +145,28 @@ class Neptune:
             if not any(rect.colliderect(obj) for obj in self.coins + self.obstacles + self.fishes):
                 return rect
 
+    def check_collisions(self):
+        # Check collision with coins
+        for coin in self.coins:
+            if self.player_rect.colliderect(coin):
+                self.coins.remove(coin)
+                self.coins_collected += 1
+                self.coins.append(self.spawn_object(self.coin_width, self.coin_height))
+
+        # Check collision with obstacles
+        for obstacle in self.obstacles:
+            if self.player_rect.colliderect(obstacle):
+                self.game_over = True
+
+        # Check collision with fishes
+        for fish in self.fishes:
+            if self.player_rect.colliderect(fish):
+                self.game_over = True
+
     def main(self):
+        # Start background music
+        mixer.music.play(-1)
+
         running = True
         while running:
             self.screen.fill(self.SKY)
@@ -147,6 +178,7 @@ class Neptune:
                     if self.game_over or self.game_won:
                         if event.key == pygame.K_r:
                             self.reset_game()
+                            mixer.music.play(-1)  # Restart BGM
                         elif event.key == pygame.K_q:
                             running = False
                     elif event.key == pygame.K_ESCAPE:
@@ -155,6 +187,7 @@ class Neptune:
                                 self.paused = False
                             elif self.selected_option == 1:  # Restart
                                 self.reset_game()
+                                mixer.music.play(-1)  # Restart BGM
                             elif self.selected_option == 2:  # Quit
                                 running = False
                         else:
@@ -169,14 +202,28 @@ class Neptune:
                                 self.paused = False
                             elif self.selected_option == 1:  # Restart
                                 self.reset_game()
+                                mixer.music.play(-1)  # Restart BGM
                             elif self.selected_option == 2:  # Quit
                                 running = False
-                        elif event.key == pygame.K_r:
-                            self.reset_game()
-                        elif event.key == pygame.K_q:
-                            running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    # Handle mouse click for pause menu options
+                    if self.paused:
+                        mouse_x, mouse_y = pygame.mouse.get_pos()
+                        for idx, option in enumerate(self.menu_options):
+                            text_surface = self.menu_font.render(option, True, self.WHITE)
+                            text_width, text_height = text_surface.get_size()
+                            option_x = self.WIDTH // 2 - text_width // 2
+                            option_y = self.HEIGHT // 2 - 50 + idx * 50
+                            if option_x <= mouse_x <= option_x + text_width and option_y <= mouse_y <= option_y + text_height:
+                                if idx == 0:  # Resume
+                                    self.paused = False
+                                elif idx == 1:  # Restart
+                                    self.reset_game()
+                                    mixer.music.play(-1)  # Restart BGM
+                                elif idx == 2:  # Quit
+                                    running = False
 
-            if not self.paused and not self.game_over and not self.game_won:
+            if not self.game_over and not self.game_won and not self.paused:
                 keys = pygame.key.get_pressed()
                 if keys[pygame.K_UP] and self.player_rect.top > 0:
                     self.player_rect.y -= self.player_speed
@@ -201,10 +248,6 @@ class Neptune:
                     if coin.x < 0:
                         coin.x = self.WIDTH + random.randint(100, 300)
                         coin.y = random.randint(0, self.HEIGHT - self.coin_height)
-                    if self.player_rect.colliderect(coin):
-                        self.coins_collected += 1
-                        coin.x = self.WIDTH + random.randint(100, 300)
-                        coin.y = random.randint(0, self.HEIGHT - self.coin_height)
 
                 # Spawn obstacles and fishes until finish line
                 if self.distance_travelled < self.finish_line_distance:
@@ -214,9 +257,8 @@ class Neptune:
                     for obstacle in self.obstacles:
                         obstacle.x -= self.player_speed
                         if obstacle.x < 0:
-                            self.obstacles.remove(obstacle)
-                        if self.player_rect.colliderect(obstacle):
-                            self.game_over = True
+                            obstacle.x = self.WIDTH + random.randint(100, 300)
+                            obstacle.y = random.randint(0, self.HEIGHT - self.obstacle_height)
 
                     if random.randint(0, 100) < 10 and len(self.fishes) < 7:
                         self.fishes.append(self.spawn_object(self.fish_width, self.fish_height))
@@ -224,9 +266,10 @@ class Neptune:
                     for fish in self.fishes:
                         fish.x -= self.player_speed
                         if fish.x < 0:
-                            self.fishes.remove(fish)
-                        if self.player_rect.colliderect(fish):
-                            self.game_over = True
+                            fish.x = self.WIDTH + random.randint(100, 300)
+                            fish.y = random.randint(0, self.HEIGHT - self.fish_height)
+
+                self.check_collisions()
 
                 for coin in self.coins:
                     self.draw_coin(coin)
@@ -236,15 +279,15 @@ class Neptune:
                     self.draw_fish(fish)
 
                 self.draw_player()
-                self.draw_text(f"Coins: {self.coins_collected}/10", 36, 20, 20, self.BLACK)
-                self.draw_text(f"Distance: {int(self.distance_travelled)} m", 36, 20, 60, self.BLACK)
+                self.draw_text(f"Coins: {self.coins_collected}/10", 24, 10, 10, self.WHITE)
+                self.draw_text(f"Distance: {int(self.distance_travelled)} m", 24, 10, 40, self.WHITE)
 
                 # Draw finish line
                 pygame.draw.line(self.screen, self.GREEN, (self.finish_line_distance, 0), (self.finish_line_distance, self.HEIGHT), 2)
 
             if self.game_over:
                 self.game_over_screen()
-            if self.game_won:
+            elif self.game_won:
                 self.game_won_screen()
 
             if self.paused:
