@@ -3,43 +3,43 @@ import sys
 
 class Mercury:
     def __init__(self):
-        # Initialize Pygame
         pygame.init()
 
-        # Screen dimensions
         self.screen_width = 1200
         self.screen_height = 800
 
-        # Colors
         self.white = (255, 255, 255)
         self.black = (0, 0, 0)
         self.red = (255, 0, 0)
-        self.translucent_gray = (128, 128, 128, 128)  # Translucent gray color with alpha
+        self.translucent_gray = (128, 128, 128, 128)
 
-        # Initialize screen
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
         pygame.display.set_caption("Trolley Problem")
 
-        # Trolley position
+        self.trolley_image = pygame.image.load('trolley.png')
+        self.trolley_image = pygame.transform.scale(self.trolley_image, (100, 100))
+
+        self.track_image = pygame.image.load('tracks.png')
+        self.track_image = pygame.transform.scale(self.track_image, (50, 100))
+        self.track_image = pygame.transform.rotate(self.track_image, 90)
+
+        # self.cross_image = self.create_cross_image()
+
         self.trolley_x = 50
         self.trolley_y = self.screen_height // 2
         self.trolley_speed = 5
 
-        # Tracks positions
         self.upper_track_y = self.screen_height // 4
         self.lower_track_y = 3 * self.screen_height // 4
         self.middle_track_y = self.screen_height // 2
 
-        # Divergence position
         self.divergence_x = self.screen_width // 2
+        self.cross_x = int(self.screen_width * 0.9)
 
-        # Trolley direction (0: no move, 1: up, 2: down)
         self.direction = 0
 
-        # Font for text
         self.font = pygame.font.SysFont(None, 55)
 
-        # Questions and answers
         self.questions = [
             {"question": "What is 2 + 2?", "up": "3", "down": "4", "correct": "down"},
             {"question": "What is the capital of France?", "up": "Paris", "down": "London", "correct": "up"},
@@ -58,8 +58,29 @@ class Mercury:
         self.show_pause_menu = False
         self.game_over = False
 
+    def create_cross_image(self):
+        cross_surface = pygame.Surface((50, 50), pygame.SRCALPHA)
+        pygame.draw.line(cross_surface, self.red, (0, 0), (50, 50), 5)
+        pygame.draw.line(cross_surface, self.red, (50, 0), (0, 50), 5)
+        return cross_surface
+
     def draw_trolley(self, x, y):
-        pygame.draw.rect(self.screen, self.red, [x - 25, y - 25, 50, 50])
+        self.screen.blit(self.trolley_image, (x - 50, y - 50))
+
+    def draw_track(self, x, y, angle=0):
+        track = pygame.transform.rotate(self.track_image, angle)
+        self.screen.blit(track, (x, y - 25))
+
+    def draw_vertical_track(self, x, y_start, y_end):
+        if y_start > y_end:
+            y_start, y_end = y_end, y_start  # Ensure y_start is always less than y_end
+        y = y_start
+        while y < y_end:
+            self.draw_track(x, y, angle=90)
+            y += 50
+
+    # def draw_cross(self, x, y):
+        # self.screen.blit(self.cross_image, (x - 25, y - 25))
 
     def draw_text(self, text, x, y):
         screen_text = self.font.render(text, True, self.black)
@@ -72,30 +93,25 @@ class Mercury:
         self.draw_text("DOWN: " + question_data["down"], self.screen_width // 2, 170)
 
     def draw_pause_menu(self):
-        # Draw translucent background to hide game objects
         s = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         s.fill(self.translucent_gray)
         self.screen.blit(s, (0, 0))
 
-        # Draw menu options
         self.draw_text("PAUSE MENU", self.screen_width // 2, self.screen_height // 2 - 100)
         self.draw_text("Press R to Resume", self.screen_width // 2, self.screen_height // 2)
         self.draw_text("Press T to Retry", self.screen_width // 2, self.screen_height // 2 + 60)
         self.draw_text("Press Q to Quit", self.screen_width // 2, self.screen_height // 2 + 120)
 
     def draw_game_over_menu(self):
-        # Draw translucent background to hide game objects
         s = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         s.fill(self.translucent_gray)
         self.screen.blit(s, (0, 0))
 
-        # Draw game over options
         self.draw_text("CRASH! Game Over.", self.screen_width // 2, self.screen_height // 2 - 100)
         self.draw_text("Press T to Retry", self.screen_width // 2, self.screen_height // 2)
         self.draw_text("Press Q to Quit", self.screen_width // 2, self.screen_height // 2 + 60)
 
     def draw_congratulations_menu(self):
-        # Draw translucent background to hide game objects
         s = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         s.fill(self.translucent_gray)
         self.screen.blit(s, (0, 0))
@@ -131,7 +147,7 @@ class Mercury:
                             self.show_pause_menu = False
                         else:
                             self.paused = not self.paused
-                            self.show_pause_menu = self.paused  # Show pause menu only when paused
+                            self.show_pause_menu = self.paused
 
                     if self.show_pause_menu:
                         if event.key == pygame.K_r:
@@ -170,16 +186,13 @@ class Mercury:
                 continue
 
             if not self.paused and not self.show_pause_menu:
-                # Move the trolley horizontally
                 self.trolley_x += self.trolley_speed
 
-            # Check if it's time to show a question (at the divergence point)
             if self.trolley_x > self.divergence_x and not self.show_question and not self.at_divergence:
                 self.show_question = True
                 self.paused = True
                 self.at_divergence = True
 
-            # Handle answering the question
             if self.show_question and self.answered:
                 correct = self.questions[self.current_question]["correct"]
                 chosen_track_y = self.upper_track_y if self.direction == 1 else self.lower_track_y
@@ -199,9 +212,8 @@ class Mercury:
                     self.incorrect = True
 
             if not self.show_question and not self.paused and not self.show_pause_menu:
-                # Check if the trolley reached the right side
-                if self.trolley_x >= self.screen_width - 25:
-                    self.trolley_x = 50  # Reset trolley position for next question
+                if self.trolley_x >= self.screen_width - 50:
+                    self.trolley_x = 50
                     self.trolley_y = self.middle_track_y
                     self.at_divergence = False
                     if self.incorrect:
@@ -213,35 +225,31 @@ class Mercury:
                             else:
                                 self.game_over = True
 
-            # Fill the screen with white
             self.screen.fill(self.white)
 
-            # Draw tracks
-            pygame.draw.line(self.screen, self.black, (0, self.middle_track_y), (self.divergence_x, self.middle_track_y), 5)
-            pygame.draw.line(self.screen, self.black, (self.divergence_x, self.middle_track_y), (self.divergence_x, self.upper_track_y), 5)
-            pygame.draw.line(self.screen, self.black, (self.divergence_x, self.middle_track_y), (self.divergence_x, self.lower_track_y), 5)
-            pygame.draw.line(self.screen, self.black, (self.divergence_x, self.upper_track_y), (self.screen_width, self.upper_track_y), 5)
-            pygame.draw.line(self.screen, self.black, (self.divergence_x, self.lower_track_y), (self.screen_width, self.lower_track_y), 5)
+            for x in range(0, self.screen_width, 50):
+                if x < self.divergence_x:
+                    self.draw_track(x, self.middle_track_y)
+                if x >= self.divergence_x:
+                    self.draw_track(x, self.upper_track_y)
+                    self.draw_track(x, self.lower_track_y)
 
-            # Draw trolley
+            self.draw_vertical_track(self.divergence_x, self.middle_track_y, self.upper_track_y)
+            self.draw_vertical_track(self.divergence_x, self.middle_track_y, self.lower_track_y)
+
+            # self.draw_cross(self.divergence_x, self.middle_track_y)
             self.draw_trolley(self.trolley_x, self.trolley_y)
 
-            # Draw question if needed
             if self.show_question:
                 self.draw_question(self.questions[self.current_question])
 
-            # Draw instructions
             if not self.show_question and not self.paused and not self.show_pause_menu:
                 self.draw_text("Press UP or DOWN to choose track", self.screen_width // 2, 50)
 
-            # Draw pause menu if paused
             if self.show_pause_menu:
                 self.draw_pause_menu()
 
-            # Update the display
             pygame.display.flip()
-
-            # Cap the frame rate
             pygame.time.Clock().tick(60)
 
         pygame.quit()
