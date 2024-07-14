@@ -1,5 +1,5 @@
 # Space-Rangers
-A 2d game where the player travels through different planets in the solar system and play different stages in each planets<br>
+A 2d game developed using pygame where the player travels through different planets in the solar system and play different stages in each planets<br>
 <br>
 The main screen includes options to 'start game', 'space navigation' and 'quit'.<br>
 <br>
