@@ -1,7 +1,46 @@
 import pygame
 import random
 import sys
+import textwrap
 from pygame import mixer
+
+
+class TextBox:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = ""
+        self.rendered_text = []
+        self.text_content = []
+        self.reveal_index = 0
+        self.line_spacing = 5
+        self.font = pygame.font.Font(None, 32)
+
+    def set_text(self, text):
+        self.text = text
+        self.rendered_text = []
+        self.text_content = []
+        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        for line in wrapped_text:
+            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
+            self.text_content.append(line)
+        self.reveal_index = 0
+
+    def update(self):
+        self.reveal_index += 1
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, (0, 0, 0), self.rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
+
+        y = self.rect.top + 10
+        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
+            x = self.rect.left + 10
+            if i * len(content) < self.reveal_index:
+                surface.blit(line, (x, y))
+                y += line.get_height() + self.line_spacing
+
+    def is_finished(self):
+        return self.reveal_index >= sum(len(line) for line in self.text_content)
 
 
 class Saturn:
@@ -63,6 +102,11 @@ class Saturn:
         self.congratulations_options = ["Retry", "Quit"]
         self.congratulations_selected = 0
 
+        self.text_box = TextBox(50, 600, 1100, 150)
+        self.game_state = "intro"
+        self.intro_text = "Welcome to Saturn! Solve the puzzle! The puzzle should look like the image on top!"
+        self.victory_text = "Congratulations! You've successfully completed the Saturn stage!\nObtained the Scorpio and the Capricorn gem"
+
     def draw_grid(self):
         for i in range(self.total_pieces):
             x = (i % self.pieces_per_row) * self.piece_size + self.center_x
@@ -104,6 +148,8 @@ class Saturn:
     def draw_congratulations(self):
         self.screen.blit(self.background, (0, 0))  # Draw the background image
 
+        self.text_box.draw(self.screen)
+
         congratulations_text = self.congratulations_font.render("Congratulations! The puzzle is solved.", True,
                                                                 self.WHITE)
         text_rect = congratulations_text.get_rect(center=(self.WIDTH // 2, self.HEIGHT // 2 - 100))
@@ -126,32 +172,14 @@ class Saturn:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over and not self.pause_menu_active:
-                x, y = event.pos
-                if self.center_x <= x < self.center_x + self.pieces_per_row * self.piece_size and \
-                        self.center_y <= y < self.center_y + self.pieces_per_row * self.piece_size:
-                    grid_x = (x - self.center_x) // self.piece_size
-                    grid_y = (y - self.center_y) // self.piece_size
-                    piece_index = grid_y * self.pieces_per_row + grid_x
-                    self.dragging_piece = piece_index
-            elif event.type == pygame.MOUSEBUTTONUP and self.dragging_piece is not None and not self.game_over and not self.pause_menu_active:
-                x, y = event.pos
-                if self.center_x <= x < self.center_x + self.pieces_per_row * self.piece_size and \
-                        self.center_y <= y < self.center_y + self.pieces_per_row * self.piece_size:
-                    grid_x = (x - self.center_x) // self.piece_size
-                    grid_y = (y - self.center_y) // self.piece_size
-                    target_index = grid_y * self.pieces_per_row + grid_x
-                    self.grid[self.dragging_piece], self.grid[target_index] = self.grid[target_index], self.grid[
-                        self.dragging_piece]
-                    self.dragging_piece = None
-
-                    # Check if the puzzle is solved after each move
-                    if self.check_correct_placement():
-                        self.game_over = True
-                        self.congratulations_active = True
-
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                if self.game_state == "intro":
+                    if event.key == pygame.K_RETURN:
+                        if self.text_box.is_finished():
+                            self.game_state = "playing"
+                        else:
+                            self.text_box.reveal_index = sum(len(line) for line in self.text_box.text_content)
+                elif event.key == pygame.K_ESCAPE:
                     if not self.congratulations_active:
                         self.pause_menu_active = not self.pause_menu_active
                         self.selected_option = 0
@@ -184,35 +212,72 @@ class Saturn:
                             pygame.mixer.music.stop()
                             return "main_menu"
 
+            elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over and not self.pause_menu_active:
+                x, y = event.pos
+                if self.center_x <= x < self.center_x + self.pieces_per_row * self.piece_size and \
+                        self.center_y <= y < self.center_y + self.pieces_per_row * self.piece_size:
+                    grid_x = (x - self.center_x) // self.piece_size
+                    grid_y = (y - self.center_y) // self.piece_size
+                    piece_index = grid_y * self.pieces_per_row + grid_x
+                    self.dragging_piece = piece_index
+
+            elif event.type == pygame.MOUSEBUTTONUP and self.dragging_piece is not None and not self.game_over and not self.pause_menu_active:
+                x, y = event.pos
+                if self.center_x <= x < self.center_x + self.pieces_per_row * self.piece_size and \
+                        self.center_y <= y < self.center_y + self.pieces_per_row * self.piece_size:
+                    grid_x = (x - self.center_x) // self.piece_size
+                    grid_y = (y - self.center_y) // self.piece_size
+                    target_index = grid_y * self.pieces_per_row + grid_x
+                    self.grid[self.dragging_piece], self.grid[target_index] = self.grid[target_index], self.grid[
+                        self.dragging_piece]
+                    self.dragging_piece = None
+
+                    # Check if the puzzle is solved after each move
+                    if self.check_correct_placement():
+                        self.game_over = True
+                        self.congratulations_active = True
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    if not self.congratulations_active:
+                        self.pause_menu_active = not self.pause_menu_active
+                        self.selected_option = 0
+
+        return None
+
     def reset_game(self):
         random.shuffle(self.grid)
         self.game_over = False
         self.congratulations_active = False
         self.selected_option = 0
         self.congratulations_selected = 0
+        self.game_state = "intro"
+        self.text_box.set_text(self.intro_text)
 
     def run(self):
         clock = pygame.time.Clock()
+        self.text_box.set_text(self.intro_text)
         while True:
-            self.handle_events()
+            action = self.handle_events()
+            if action == "main_menu":
+                return "main_menu"
 
             self.screen.blit(self.background, (0, 0))
 
-            if self.congratulations_active:
+            if self.game_state == "intro":
+                self.text_box.update()
+                self.text_box.draw(self.screen)
+            elif self.congratulations_active:
+                if self.text_box.text != self.victory_text:
+                    self.text_box.set_text(self.victory_text)
+                self.text_box.update()
                 self.draw_congratulations()
-            else:
+            elif self.game_state == "playing":
                 self.draw_reference_image()
                 self.draw_grid()
 
             if self.pause_menu_active and not self.congratulations_active:
                 self.draw_pause_menu()
-
-            if self.pause_menu_active:
-                self.draw_pause_menu()
-                result = self.handle_events()
-                if result == "main_menu":
-                    running = False
-                    return "main_menu"
 
             pygame.display.flip()
             clock.tick(30)

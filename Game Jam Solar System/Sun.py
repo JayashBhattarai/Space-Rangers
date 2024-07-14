@@ -5,6 +5,7 @@ import time
 from pygame import mixer
 import textwrap
 
+
 class TextBox:
     def __init__(self, x, y, width, height):
         self.rect = pygame.Rect(x, y, width, height)
@@ -42,11 +43,15 @@ class TextBox:
     def is_finished(self):
         return self.reveal_index >= sum(len(line) for line in self.text_content)
 
+
 class Sun:
     def __init__(self):
         pygame.init()
+
         self.screen = pygame.display.set_mode((1200, 750))
+
         self.background = pygame.image.load('sun.jpg')
+
         pygame.display.set_caption("Level Sun")
         icon = pygame.image.load('ufo.png')
         pygame.display.set_icon(icon)
@@ -70,7 +75,9 @@ class Sun:
         self.number_of_enemy = 1
 
         for i in range(self.number_of_enemy):
-            self.enemyImg.append(pygame.image.load('alien.png'))
+            original_enemy_img = pygame.image.load('alien.png')
+            scaled_enemy_img = pygame.transform.scale(original_enemy_img, (original_enemy_img.get_width() * 1, original_enemy_img.get_height() * 1))
+            self.enemyImg.append(scaled_enemy_img)
             self.enemyX.append(600)
             self.enemyY.append(75)
             self.enemyX_change.append(1)  # Slower enemy movement
@@ -116,7 +123,7 @@ class Sun:
         self.text_box = TextBox(50, 600, 1100, 150)
         self.game_state = "intro"
         self.intro_text = "So you're here.. Think you can defeat me? Give it a try!"
-        self.victory_text = "Yeah! We did it!!"
+        self.victory_text = "Yeah! We did it!! The main boss is defeated!"
         self.defeat_text = "He's too strong..."
 
     def show_hp(self, x, y):

@@ -1,5 +1,44 @@
 import pygame
-import sys
+import textwrap
+
+
+class TextBox:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = ""
+        self.rendered_text = []
+        self.text_content = []
+        self.reveal_index = 0
+        self.line_spacing = 5
+        self.font = pygame.font.Font(None, 32)
+
+    def set_text(self, text):
+        self.text = text
+        self.rendered_text = []
+        self.text_content = []
+        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        for line in wrapped_text:
+            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
+            self.text_content.append(line)
+        self.reveal_index = 0
+
+    def update(self):
+        self.reveal_index += 1
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, (0, 0, 0), self.rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
+
+        y = self.rect.top + 10
+        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
+            x = self.rect.left + 10
+            if i * len(content) < self.reveal_index:
+                surface.blit(line, (x, y))
+                y += line.get_height() + self.line_spacing
+
+    def is_finished(self):
+        return self.reveal_index >= sum(len(line) for line in self.text_content)
+
 
 class Mercury:
     def __init__(self):
@@ -16,14 +55,16 @@ class Mercury:
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
         pygame.display.set_caption("Trolley Problem")
 
+        # Load background image
+        self.background = pygame.image.load('mercury.jpg').convert()
+        self.background = pygame.transform.scale(self.background, (self.screen_width, self.screen_height))
+
         self.trolley_image = pygame.image.load('trolley.png')
         self.trolley_image = pygame.transform.scale(self.trolley_image, (100, 100))
 
         self.track_image = pygame.image.load('tracks.png')
         self.track_image = pygame.transform.scale(self.track_image, (50, 100))
         self.track_image = pygame.transform.rotate(self.track_image, 90)
-
-        # self.cross_image = self.create_cross_image()
 
         self.trolley_x = 50
         self.trolley_y = self.screen_height // 2
@@ -34,18 +75,17 @@ class Mercury:
         self.middle_track_y = self.screen_height // 2
 
         self.divergence_x = self.screen_width // 2
-        self.cross_x = int(self.screen_width * 0.9)
 
         self.direction = 0
 
-        self.font = pygame.font.SysFont(None, 55)
+        self.font = pygame.font.SysFont(None, 40)  # Decreased font size to 40
 
         self.questions = [
-            {"question": "What is 2 + 2?", "up": "3", "down": "4", "correct": "down"},
-            {"question": "What is the capital of France?", "up": "Paris", "down": "London", "correct": "up"},
-            {"question": "What is the largest planet?", "up": "Earth", "down": "Jupiter", "correct": "down"},
-            {"question": "What is the square root of 16?", "up": "3", "down": "4", "correct": "down"},
-            {"question": "What is the chemical symbol for water?", "up": "H2O", "down": "CO2", "correct": "up"}
+            {"question": "Where is the largest Volcano in the Solar System?", "up": "Saturn", "down": "Mars", "correct": "down"},
+            {"question": "How many moons does Jupiter have?", "up": "79", "down": "81", "correct": "up"},
+            {"question": "What is the largest moon in the solar system?", "up": "Titan", "down": "Ganymede", "correct": "down"},
+            {"question": "Which planet is closest in size to Earth?", "up": "Neptune", "down": "Venus", "correct": "down"},
+            {"question": "Which is the coldest planet in the solar system?", "up": "Uranus", "down": "Neptune", "correct": "up"}
         ]
         self.current_question = 0
         self.show_question = False
@@ -58,11 +98,19 @@ class Mercury:
         self.show_pause_menu = False
         self.game_over = False
 
-    def create_cross_image(self):
-        cross_surface = pygame.Surface((50, 50), pygame.SRCALPHA)
-        pygame.draw.line(cross_surface, self.red, (0, 0), (50, 50), 5)
-        pygame.draw.line(cross_surface, self.red, (50, 0), (0, 50), 5)
-        return cross_surface
+        # Load and play background music
+        pygame.mixer.music.load('mercurybgm.mp3')
+        pygame.mixer.music.play(-1)  # -1 loops indefinitely, 0 plays once
+
+        # Load explosion sound
+        self.explosion_sound = pygame.mixer.Sound('explosion.wav')
+
+        # Text box and game state
+        self.text_box = TextBox(50, 600, 1100, 150)
+        self.game_state = "intro"
+        self.intro_text = "Welcome to Mercury! Your mission is to get past the cave! Choose the right path wisely!"
+        self.victory_text = "Congratulations! You've successfully gone past the cave! Obtained the Taurus gem"
+        self.defeat_text = "Mission failed. Rethink about your choices. Try again!"
 
     def draw_trolley(self, x, y):
         self.screen.blit(self.trolley_image, (x - 50, y - 50))
@@ -79,23 +127,20 @@ class Mercury:
             self.draw_track(x, y, angle=90)
             y += 50
 
-    # def draw_cross(self, x, y):
-        # self.screen.blit(self.cross_image, (x - 25, y - 25))
-
     def draw_text(self, text, x, y):
-        screen_text = self.font.render(text, True, self.black)
+        screen_text = self.font.render(text, True, self.white)
         text_rect = screen_text.get_rect(center=(x, y))
         self.screen.blit(screen_text, text_rect)
 
     def draw_question(self, question_data):
         self.draw_text(question_data["question"], self.screen_width // 2, 50)
         self.draw_text("UP: " + question_data["up"], self.screen_width // 2, 110)
-        self.draw_text("DOWN: " + question_data["down"], self.screen_width // 2, 170)
+        self.draw_text("DOWN: " + question_data["down"], self.screen_width // 2, 150)
 
     def draw_pause_menu(self):
         s = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         s.fill(self.translucent_gray)
-        self.screen.blit(s, (0, 0))
+        self.screen.blit(self.background, (0, 0))
 
         self.draw_text("PAUSE MENU", self.screen_width // 2, self.screen_height // 2 - 100)
         self.draw_text("Press R to Resume", self.screen_width // 2, self.screen_height // 2)
@@ -105,8 +150,9 @@ class Mercury:
     def draw_game_over_menu(self):
         s = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         s.fill(self.translucent_gray)
-        self.screen.blit(s, (0, 0))
+        self.screen.blit(self.background, (0, 0))
 
+        self.text_box.draw(self.screen)
         self.draw_text("CRASH! Game Over.", self.screen_width // 2, self.screen_height // 2 - 100)
         self.draw_text("Press T to Retry", self.screen_width // 2, self.screen_height // 2)
         self.draw_text("Press Q to Quit", self.screen_width // 2, self.screen_height // 2 + 60)
@@ -114,8 +160,9 @@ class Mercury:
     def draw_congratulations_menu(self):
         s = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         s.fill(self.translucent_gray)
-        self.screen.blit(s, (0, 0))
+        self.screen.blit(self.background, (0, 0))
 
+        self.text_box.draw(self.screen)
         self.draw_text("Congratulations! You won!", self.screen_width // 2, self.screen_height // 2 - 100)
         self.draw_text("Press T to Retry", self.screen_width // 2, self.screen_height // 2)
         self.draw_text("Press Q to Quit", self.screen_width // 2, self.screen_height // 2 + 60)
@@ -133,15 +180,27 @@ class Mercury:
         self.incorrect = False
         self.show_pause_menu = False
         self.game_over = False
+        self.game_state = "intro"
+        self.text_box.set_text(self.intro_text)
 
     def main(self):
         running = True
+
+        self.text_box.set_text(self.intro_text)
+
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
+                    if self.game_state == "intro":
+                        if event.key == pygame.K_RETURN:
+                            if self.text_box.is_finished():
+                                self.game_state = "playing"
+                            else:
+                                self.text_box.reveal_index = sum(len(line) for line in self.text_box.text_content)
+                    elif event.key == pygame.K_ESCAPE:
                         if self.show_pause_menu:
                             self.paused = False
                             self.show_pause_menu = False
@@ -158,7 +217,7 @@ class Mercury:
                         if event.key == pygame.K_q:
                             pygame.mixer.music.stop()
                             return "main_menu"
-                    elif self.game_completed or self.game_over:
+                    elif self.game_state in ["victory", "defeat"]:
                         if event.key == pygame.K_t:
                             self.reset_game()
                         if event.key == pygame.K_q:
@@ -171,17 +230,20 @@ class Mercury:
                         if event.key == pygame.K_DOWN:
                             self.direction = 2
                             self.answered = True
+
                 if event.type == pygame.KEYUP:
                     if event.key in (pygame.K_UP, pygame.K_DOWN):
                         self.direction = 0
 
             if self.game_completed:
+                self.game_state = "victory"
                 self.screen.fill(self.white)
                 self.draw_congratulations_menu()
                 pygame.display.flip()
                 continue
 
             if self.game_over:
+                self.game_state = "defeat"
                 self.screen.fill(self.white)
                 self.draw_game_over_menu()
                 pygame.display.flip()
@@ -219,6 +281,7 @@ class Mercury:
                     self.trolley_y = self.middle_track_y
                     self.at_divergence = False
                     if self.incorrect:
+                        self.explosion_sound.play()  # Play explosion sound on crash
                         self.game_over = True
                     else:
                         if self.current_question >= len(self.questions):
@@ -227,34 +290,54 @@ class Mercury:
                             else:
                                 self.game_over = True
 
-            self.screen.fill(self.white)
+            if self.game_state == "playing":
+                if self.game_completed:
+                    self.game_state = "victory"
+                    self.text_box.set_text(self.victory_text)
+                elif self.game_over:
+                    self.game_state = "defeat"
+                    self.text_box.set_text(self.defeat_text)
 
-            for x in range(0, self.screen_width, 50):
-                if x < self.divergence_x:
-                    self.draw_track(x, self.middle_track_y)
-                if x >= self.divergence_x:
-                    self.draw_track(x, self.upper_track_y)
-                    self.draw_track(x, self.lower_track_y)
+            # Draw background
+            self.screen.blit(self.background, (0, 0))
 
-            self.draw_vertical_track(self.divergence_x, self.middle_track_y, self.upper_track_y)
-            self.draw_vertical_track(self.divergence_x, self.middle_track_y, self.lower_track_y)
+            if self.game_state == "intro":
+                self.text_box.update()
+                self.text_box.draw(self.screen)
+            elif self.game_state == "playing":
+                for x in range(0, self.screen_width, 50):
+                    if x < self.divergence_x:
+                        self.draw_track(x, self.middle_track_y)
+                    if x >= self.divergence_x:
+                        self.draw_track(x, self.upper_track_y)
+                        self.draw_track(x, self.lower_track_y)
 
-            # self.draw_cross(self.divergence_x, self.middle_track_y)
-            self.draw_trolley(self.trolley_x, self.trolley_y)
+                self.draw_vertical_track(self.divergence_x, self.middle_track_y, self.upper_track_y)
+                self.draw_vertical_track(self.divergence_x, self.middle_track_y, self.lower_track_y)
 
-            if self.show_question:
-                self.draw_question(self.questions[self.current_question])
+                self.draw_trolley(self.trolley_x, self.trolley_y)
 
-            if not self.show_question and not self.paused and not self.show_pause_menu:
-                self.draw_text("Press UP or DOWN to choose track", self.screen_width // 2, 50)
+                if self.show_question:
+                    self.draw_question(self.questions[self.current_question])
 
-            if self.show_pause_menu:
-                self.draw_pause_menu()
+                if not self.show_question and not self.paused and not self.show_pause_menu:
+                    self.draw_text("Press UP or DOWN to choose track", self.screen_width // 2, 50)
+
+                if self.show_pause_menu:
+                    self.draw_pause_menu()
+
+            elif self.game_state == "victory":
+                self.text_box.update()
+                self.draw_congratulations_menu()
+            elif self.game_state == "defeat":
+                self.text_box.update()
+                self.draw_game_over_menu()
 
             pygame.display.flip()
             pygame.time.Clock().tick(60)
 
         pygame.quit()
+
 
 if __name__ == "__main__":
     game = Mercury()

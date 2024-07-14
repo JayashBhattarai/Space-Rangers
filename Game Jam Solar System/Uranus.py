@@ -1,7 +1,48 @@
 import pygame
 import random
 import math
+import textwrap
+import time
 from pygame import mixer
+
+
+class TextBox:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = ""
+        self.rendered_text = []
+        self.text_content = []
+        self.reveal_index = 0
+        self.line_spacing = 5
+        self.font = pygame.font.Font(None, 32)
+
+    def set_text(self, text):
+        self.text = text
+        self.rendered_text = []
+        self.text_content = []
+        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        for line in wrapped_text:
+            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
+            self.text_content.append(line)
+        self.reveal_index = 0
+
+    def update(self):
+        self.reveal_index += 1
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, (0, 0, 0), self.rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
+
+        y = self.rect.top + 10
+        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
+            x = self.rect.left + 10
+            if i * len(content) < self.reveal_index:
+                surface.blit(line, (x, y))
+                y += line.get_height() + self.line_spacing
+
+    def is_finished(self):
+        return self.reveal_index >= sum(len(line) for line in self.text_content)
+
 
 class Uranus:
     def __init__(self):
@@ -18,6 +59,10 @@ class Uranus:
 
         # Load pop sound
         self.pop_sound = pygame.mixer.Sound('pop.mp3')
+
+        # Load background music
+        pygame.mixer.music.load('uranusbgm.mp3')
+        pygame.mixer.music.play(-1)  # Play the music in a loop
 
         # Colors
         self.WHITE = (255, 255, 255)
@@ -46,6 +91,13 @@ class Uranus:
         # Pause menu options
         self.menu_options = ["Resume (ESC)", "Restart (R)", "Quit (Q)"]
         self.selected_option = 0
+
+        # Text box and game state
+        self.text_box = TextBox(50, 600, 1100, 150)
+        self.game_state = "intro"
+        self.intro_text = "Welcome to Uranus! Your mission is to pop the RED balloons! Don't miss a single shot!"
+        self.victory_text = "Congratulations! You've successfully popped all the balloons! Obtained the Sagittarius gem"
+        self.defeat_text = "Mission failed. Stay calm and aim. Try again!"
 
     class Balloon:
         def __init__(self, x, y, color, parent):
@@ -121,6 +173,7 @@ class Uranus:
         self.balloons += [self.Balloon(random.randint(50, self.WIDTH - 50), random.randint(50, self.HEIGHT - 50), self.GRAY, self) for _ in range(10)]
         self.arrow = None
         self.player_score = 0
+        self.game_state = "playing"
 
     def draw_pause_menu(self):
         # Draw translucent background
@@ -138,56 +191,91 @@ class Uranus:
             if idx == self.selected_option:
                 pygame.draw.rect(self.screen, self.WHITE, (x - 10, y - 10, text_surface.get_width() + 20, text_surface.get_height() + 20), 3)
 
+    def handle_game_over(self, is_victory):
+        overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))  # Translucent black
+
+        waiting = True
+        while waiting:
+            self.screen.blit(self.background, (0, 0))
+            # self.screen.blit(overlay, (0, 0))
+
+            if is_victory:
+                self.display_message("Congratulations!")
+            else:
+                self.display_message("Game Over!")
+
+            self.text_box.update()
+            self.text_box.draw(self.screen)
+
+            if self.text_box.is_finished():
+                self.display_message("", "Press R to restart or Q to quit")
+
+            pygame.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return "quit"
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_r:
+                        self.reset_game()
+                        return "restart"
+                    elif event.key == pygame.K_q:
+                        pygame.mixer.music.stop()
+                        return "main_menu"
+
+            self.clock.tick(60)
+
     def main(self):
         running = True
-        clock = pygame.time.Clock()
+        self.clock = pygame.time.Clock()
+        self.text_box.set_text(self.intro_text)
 
         while running:
+            self.screen.blit(self.background, (0, 0))
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE and not self.game_over and not self.congratulations:
-                        if self.paused:
-                            if self.selected_option == 0:
-                                self.paused = False  # Resume
-                            elif self.selected_option == 1:
-                                self.reset_game()  # Restart
-                            elif self.selected_option == 2:
-                                running = False  # Quit
-                        else:
-                            self.paused = not self.paused
-                    elif self.paused:
-                        if event.key == pygame.K_DOWN:
-                            self.selected_option = (self.selected_option + 1) % len(self.menu_options)
-                        elif event.key == pygame.K_UP:
-                            self.selected_option = (self.selected_option - 1) % len(self.menu_options)
-                        elif event.key == pygame.K_RETURN:
-                            if self.selected_option == 0:  # Resume
-                                self.paused = False
-                            elif self.selected_option == 1:  # Restart
-                                self.reset_game()
-                            elif self.selected_option == 2:  # Quit
-                                pygame.mixer.music.stop()
-                                return "main_menu"
-                        elif event.key == pygame.K_r:
-                            self.reset_game()
-                        elif event.key == pygame.K_q:
-                            pygame.mixer.music.stop()
-                            return "main_menu"
-                    elif event.key == pygame.K_r and (self.game_over or self.congratulations):
-                        self.reset_game()
-                    elif event.key == pygame.K_q and (self.game_over or self.congratulations):
-                        running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over and self.arrow is None and not self.congratulations and not self.paused:
+                    if self.game_state == "intro" and self.text_box.is_finished():
+                        self.game_state = "playing"
+                    elif self.game_state == "playing":
+                        if event.key == pygame.K_ESCAPE:
+                            if self.paused:
+                                if self.selected_option == 0:
+                                    self.paused = False  # Resume
+                                elif self.selected_option == 1:
+                                    self.reset_game()  # Restart
+                                elif self.selected_option == 2:
+                                    pygame.mixer.music.stop()  # Quit
+                                    return "main_menu"
+                            else:
+                                self.paused = not self.paused
+                        elif self.paused:
+                            if event.key == pygame.K_DOWN:
+                                self.selected_option = (self.selected_option + 1) % len(self.menu_options)
+                            elif event.key == pygame.K_UP:
+                                self.selected_option = (self.selected_option - 1) % len(self.menu_options)
+                            elif event.key == pygame.K_RETURN:
+                                if self.selected_option == 0:  # Resume
+                                    self.paused = False
+                                elif self.selected_option == 1:  # Restart
+                                    self.reset_game()
+                                elif self.selected_option == 2:  # Quit
+                                    pygame.mixer.music.stop()
+                                    return "main_menu"
+                elif event.type == pygame.MOUSEBUTTONDOWN and self.game_state == "playing" and not self.paused and self.arrow is None:
                     x, y = event.pos
-                    self.arrow = self.Arrow(self.bow_x, self.bow_y, x, y, self.BLACK)
+                    self.arrow = self.Arrow(self.bow_x, self.bow_y, x, y, self.RED)
 
-            if not self.paused:
-                if not self.game_over and not self.congratulations:
-                    # Draw background image
-                    self.screen.blit(self.background, (0, 0))
-
+            if self.game_state == "intro":
+                self.text_box.update()
+                self.text_box.draw(self.screen)
+                if self.text_box.is_finished():
+                    self.display_message("", "Press any key to start")
+            elif self.game_state == "playing":
+                if not self.paused:
                     # Move and draw balloons
                     for balloon in self.balloons:
                         balloon.move()
@@ -202,20 +290,20 @@ class Uranus:
                         balloon = self.check_collision(self.arrow)
                         if balloon:
                             if balloon.color == self.RED:
-                                self.pop_sound.play()  # Play pop sound
+                                self.pop_sound.play()
                                 self.balloons.remove(balloon)
                                 self.arrow = None
                                 self.player_score += 1
                                 if self.player_score == 5:
-                                    self.congratulations = True
-                                    self.show_congratulations()
+                                    self.game_state = "victory"
+                                    self.text_box.set_text(self.victory_text)
                             else:
-                                self.game_over = True
-                                self.show_game_over()
+                                self.game_state = "defeat"
+                                self.text_box.set_text(self.defeat_text)
                                 self.arrow = None
                         elif self.arrow.y < 0 or self.arrow.x < 0 or self.arrow.x > self.WIDTH:
-                            self.game_over = True
-                            self.show_game_over()
+                            self.game_state = "defeat"
+                            self.text_box.set_text(self.defeat_text)
                             self.arrow = None
 
                     # Draw bow and aiming line
@@ -224,25 +312,27 @@ class Uranus:
                         angle = math.atan2(mouse_y - self.bow_y, mouse_x - self.bow_x)
                         end_x = self.bow_x + self.bow_length * math.cos(angle)
                         end_y = self.bow_y + self.bow_length * math.sin(angle)
-                        pygame.draw.line(self.screen, self.BLACK, (self.bow_x, self.bow_y), (end_x, end_y), 5)
+                        pygame.draw.line(self.screen, self.RED, (self.bow_x, self.bow_y), (end_x, end_y), 5)
 
-                if self.game_over:
-                    self.show_game_over()
-
-                if self.congratulations:
-                    self.show_congratulations()
-
-                # Draw score
-                score_text = self.small_font.render(f"Score: {self.player_score}/5", True, self.WHITE)
-                self.screen.blit(score_text, (20, 20))
-
-            else:
-                self.draw_pause_menu()
+                    # Draw score
+                    score_text = self.small_font.render(f"Score: {self.player_score}/5", True, self.WHITE)
+                    self.screen.blit(score_text, (20, 20))
+                else:
+                    self.draw_pause_menu()
+            elif self.game_state == "victory" or self.game_state == "defeat":
+                result = self.handle_game_over(self.game_state == "victory")
+                if result == "restart":
+                    self.game_state = "playing"
+                elif result == "main_menu":
+                    return "main_menu"
+                elif result == "quit":
+                    running = False
 
             pygame.display.flip()
-            clock.tick(60)
+            self.clock.tick(60)
 
         pygame.quit()
+        return "main_menu"
 
 
 if __name__ == "__main__":
