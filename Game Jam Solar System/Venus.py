@@ -16,11 +16,25 @@ class TextBox:
         self.text = text
         self.rendered_text = []
         self.text_content = []
-        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        wrapped_text = self.wrap_text(text, self.rect.width - 20)
         for line in wrapped_text:
             self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
             self.text_content.append(line)
         self.reveal_index = 0
+
+    def wrap_text(self, text, max_width):
+        words = text.split(' ')
+        wrapped_lines = []
+        current_line = ""
+        for word in words:
+            test_line = current_line + word + " "
+            if self.font.size(test_line)[0] <= max_width:
+                current_line = test_line
+            else:
+                wrapped_lines.append(current_line.strip())
+                current_line = word + " "
+        wrapped_lines.append(current_line.strip())
+        return wrapped_lines
 
     def update(self):
         self.reveal_index += 1
@@ -50,7 +64,7 @@ class Venus:
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Zodiac Memory Card Game")
 
-        self.background = pygame.image.load('venus.jpg')
+        self.background = pygame.image.load('src/venus.jpg')
 
         # Colors
         self.WHITE = (255, 255, 255)
@@ -89,14 +103,14 @@ class Venus:
 
         # Initialize mixer and load background music
         pygame.mixer.init()
-        pygame.mixer.music.load('venus.mp3')
+        pygame.mixer.music.load('src/venus.mp3')
         pygame.mixer.music.set_volume(0.1)  # Set initial volume (0.0 to 1.0)
         pygame.mixer.music.play(-1)  # -1 makes the music loop indefinitely
 
         self.text_box = TextBox(50, 600, 1100, 150)
         self.game_state = "intro"
-        self.intro_text = "Welcome to Venus! Your mission is to match the cards with same zodiac name"
-        self.victory_text = "Congratulations! You've successfully matched all the cards! Obtained the Gemini and the Virgo gem"
+        self.intro_text = "Welcome to Venus! John, your mission is to match the cards with same zodiac name"
+        self.victory_text = "Congratulations! You've successfully matched all the cards! Obtained the Gemini and the Virgo gem. John! It seems like we can not go to Mercury because of the heat barrier. We need to find Aquarius and Pisces to go through it!"
 
     def create_cards(self):
         card_values = self.ZODIAC_SIGNS * 2

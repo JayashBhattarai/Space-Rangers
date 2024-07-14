@@ -19,11 +19,25 @@ class TextBox:
         self.text = text
         self.rendered_text = []
         self.text_content = []
-        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        wrapped_text = self.wrap_text(text, self.rect.width - 20)
         for line in wrapped_text:
             self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
             self.text_content.append(line)
         self.reveal_index = 0
+
+    def wrap_text(self, text, max_width):
+        words = text.split(' ')
+        wrapped_lines = []
+        current_line = ""
+        for word in words:
+            test_line = current_line + word + " "
+            if self.font.size(test_line)[0] <= max_width:
+                current_line = test_line
+            else:
+                wrapped_lines.append(current_line.strip())
+                current_line = word + " "
+        wrapped_lines.append(current_line.strip())
+        return wrapped_lines
 
     def update(self):
         self.reveal_index += 1
@@ -52,10 +66,10 @@ class Saturn:
         self.HEIGHT = 800
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Alien Jigsaw Puzzle")
-        self.background = pygame.image.load("saturnbackground.jpg")
+        self.background = pygame.image.load("src/saturnbackground.jpg")
         self.background = pygame.transform.scale(self.background, (self.WIDTH, self.HEIGHT))
 
-        mixer.music.load('saturnbgm.mp3')
+        mixer.music.load('src/saturnbgm.mp3')
         mixer.music.play(-1)
 
         # Colors
@@ -64,7 +78,7 @@ class Saturn:
         self.GRAY = (169, 169, 169)
 
         # Load image
-        self.alien_image = pygame.image.load('saturn.png')
+        self.alien_image = pygame.image.load('src/saturn.png')
 
         # Resize image
         self.sign_size = 300
@@ -104,8 +118,8 @@ class Saturn:
 
         self.text_box = TextBox(50, 600, 1100, 150)
         self.game_state = "intro"
-        self.intro_text = "Welcome to Saturn! Solve the puzzle! The puzzle should look like the image on top!"
-        self.victory_text = "Congratulations! You've successfully completed the Saturn stage!\nObtained the Scorpio and the Capricorn gem"
+        self.intro_text = "Welcome to Saturn! John, there's a puzzle! The puzzle should look like the image on top!"
+        self.victory_text = "Congratulations! You've successfully completed the Saturn stage! Obtained the Scorpio and the Capricorn gem"
 
     def draw_grid(self):
         for i in range(self.total_pieces):

@@ -20,11 +20,25 @@ class TextBox:
         self.text = text
         self.rendered_text = []
         self.text_content = []
-        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        wrapped_text = self.wrap_text(text, self.rect.width - 20)
         for line in wrapped_text:
             self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
             self.text_content.append(line)
         self.reveal_index = 0
+
+    def wrap_text(self, text, max_width):
+        words = text.split(' ')
+        wrapped_lines = []
+        current_line = ""
+        for word in words:
+            test_line = current_line + word + " "
+            if self.font.size(test_line)[0] <= max_width:
+                current_line = test_line
+            else:
+                wrapped_lines.append(current_line.strip())
+                current_line = word + " "
+        wrapped_lines.append(current_line.strip())
+        return wrapped_lines
 
     def update(self):
         self.reveal_index += 1
@@ -55,13 +69,13 @@ class Uranus:
         pygame.display.set_caption("Balloon Pop Game")
 
         # Load background image
-        self.background = pygame.image.load('uranus.jpg')
+        self.background = pygame.image.load('src/uranus.jpg')
 
         # Load pop sound
-        self.pop_sound = pygame.mixer.Sound('pop.mp3')
+        self.pop_sound = pygame.mixer.Sound('src/pop.mp3')
 
         # Load background music
-        pygame.mixer.music.load('uranusbgm.mp3')
+        pygame.mixer.music.load('src/uranusbgm.mp3')
         pygame.mixer.music.play(-1)  # Play the music in a loop
 
         # Colors
@@ -95,9 +109,9 @@ class Uranus:
         # Text box and game state
         self.text_box = TextBox(50, 600, 1100, 150)
         self.game_state = "intro"
-        self.intro_text = "Welcome to Uranus! Your mission is to pop the RED balloons! Don't miss a single shot!"
-        self.victory_text = "Congratulations! You've successfully popped all the balloons! Obtained the Sagittarius gem"
-        self.defeat_text = "Mission failed. Stay calm and aim. Try again!"
+        self.intro_text = "Welcome to Uranus! John, your mission is to pop only the RED balloons! Don't miss a single shot!"
+        self.victory_text = "Congratulations! You've successfully popped all the RED balloons! Obtained the Sagittarius gem"
+        self.defeat_text = "Mission failed. John, stay calm and aim. Try again!"
 
     class Balloon:
         def __init__(self, x, y, color, parent):

@@ -19,11 +19,25 @@ class TextBox:
         self.text = text
         self.rendered_text = []
         self.text_content = []
-        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        wrapped_text = self.wrap_text(text, self.rect.width - 20)
         for line in wrapped_text:
             self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
             self.text_content.append(line)
         self.reveal_index = 0
+
+    def wrap_text(self, text, max_width):
+        words = text.split(' ')
+        wrapped_lines = []
+        current_line = ""
+        for word in words:
+            test_line = current_line + word + " "
+            if self.font.size(test_line)[0] <= max_width:
+                current_line = test_line
+            else:
+                wrapped_lines.append(current_line.strip())
+                current_line = word + " "
+        wrapped_lines.append(current_line.strip())
+        return wrapped_lines
 
     def update(self):
         self.reveal_index += self.reveal_speed
@@ -68,7 +82,7 @@ class Neptune:
         self.GREEN = (0, 255, 0)
 
         # Load background music
-        mixer.music.load('neptunebgm.mp3')
+        mixer.music.load('src/neptunebgm.mp3')
 
         # Player settings
         self.player_width, self.player_height = 50, 30
@@ -111,22 +125,22 @@ class Neptune:
         self.reset_game()
 
         # Load images
-        self.player_img = pygame.image.load("submarine.png")
+        self.player_img = pygame.image.load("src/submarine.png")
         self.player_width, self.player_height = 100, 60  # Adjust dimensions as needed
         self.player_img = pygame.transform.scale(self.player_img, (self.player_width, self.player_height))
 
-        self.fish_img = pygame.image.load("fish.png")
+        self.fish_img = pygame.image.load("src/fish.png")
         self.fish_img = pygame.transform.scale(self.fish_img, (self.fish_width, self.fish_height))
 
-        self.obstacle_img = pygame.image.load("wooden-box.png")
+        self.obstacle_img = pygame.image.load("src/wooden-box.png")
         self.obstacle_img = pygame.transform.scale(self.obstacle_img, (self.obstacle_width, self.obstacle_height))
 
         # Text box and game state
         self.text_box = TextBox(50, 600, 1100, 150)
         self.game_state = "intro"
-        self.intro_text = "Welcome to Neptune! Your mission is to travel underwater! Don't forget to collect the coins!"
+        self.intro_text = "Welcome to Neptune! John, your mission is to travel underwater! Don't forget to collect the coins!"
         self.victory_text = "Congratulations! You've successfully reached the destination! Obtained the Aquarius and the Pisces gem"
-        self.defeat_text = "Mission failed. Be patient. Try again!"
+        self.defeat_text = "Mission failed. John, be patient. Try again!"
 
     def reset_game(self):
         self.player_y = self.HEIGHT // 2 - self.player_height // 2

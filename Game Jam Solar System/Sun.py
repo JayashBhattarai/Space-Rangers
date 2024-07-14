@@ -50,18 +50,18 @@ class Sun:
 
         self.screen = pygame.display.set_mode((1200, 750))
 
-        self.background = pygame.image.load('sun.jpg')
+        self.background = pygame.image.load('src/sun.jpg')
 
         pygame.display.set_caption("Level Sun")
-        icon = pygame.image.load('ufo.png')
+        icon = pygame.image.load('src/ufo.png')
         pygame.display.set_icon(icon)
 
         # Background Sound
-        mixer.music.load('background.wav')
+        mixer.music.load('src/background.wav')
         mixer.music.play(-1)
 
         # Player
-        self.playerImg = pygame.image.load('user.png')
+        self.playerImg = pygame.image.load('src/user.png')
         self.playerX = 600
         self.playerY = 640
         self.playerX_change = 0
@@ -75,7 +75,7 @@ class Sun:
         self.number_of_enemy = 1
 
         for i in range(self.number_of_enemy):
-            original_enemy_img = pygame.image.load('alien.png')
+            original_enemy_img = pygame.image.load('src/alien.png')
             scaled_enemy_img = pygame.transform.scale(original_enemy_img, (original_enemy_img.get_width() * 1, original_enemy_img.get_height() * 1))
             self.enemyImg.append(scaled_enemy_img)
             self.enemyX.append(600)
@@ -84,7 +84,7 @@ class Sun:
             self.enemyY_change.append(20)
 
         # Laser
-        self.laserImg = pygame.image.load('bullet.png')
+        self.laserImg = pygame.image.load('src/bullet.png')
         self.laserX = 0
         self.laserY = 640
         self.laserX_change = 0
@@ -92,7 +92,7 @@ class Sun:
         self.laser_state = "ready"
 
         # Enemy Bullet
-        self.enemy_bullet_img = pygame.image.load('bullet.png')
+        self.enemy_bullet_img = pygame.image.load('src/bullet.png')
         self.enemy_bullets = []
         self.bulletY_change = 2.5  # Slower enemy bullet movement
 
@@ -122,8 +122,8 @@ class Sun:
         # Text box and game state
         self.text_box = TextBox(50, 600, 1100, 150)
         self.game_state = "intro"
-        self.intro_text = "So you're here.. Think you can defeat me? Give it a try!"
-        self.victory_text = "Yeah! We did it!! The main boss is defeated!"
+        self.intro_text = "John! It's the alien boss! Shoot lasers to defeat him. Beware of his lasers too!"
+        self.victory_text = "Yeah! We did it!! The alien boss is defeated! Now let's activate the shield machine."
         self.defeat_text = "He's too strong..."
 
     def show_hp(self, x, y):
@@ -210,7 +210,7 @@ class Sun:
                             self.playerX_change = 1.5  # Slower player movement
                         if event.key == pygame.K_SPACE:
                             if self.laser_state == "ready":
-                                bullet_sound = mixer.Sound('laser.wav')
+                                bullet_sound = mixer.Sound('src/laser.wav')
                                 bullet_sound.play()
                                 self.laserX = self.playerX
                                 self.fire_laser(self.laserX, self.laserY)
@@ -260,7 +260,7 @@ class Sun:
 
                     collision = self.isCollision(self.enemyX[i], self.enemyY[i], self.laserX, self.laserY)
                     if collision:
-                        explosion_sound = mixer.Sound('explosion.wav')
+                        explosion_sound = mixer.Sound('src/explosion.wav')
                         explosion_sound.play()
                         self.laserY = 640
                         self.laser_state = "ready"
@@ -286,7 +286,7 @@ class Sun:
                     self.screen.blit(self.enemy_bullet_img, (bullet[0], bullet[1]))
                     collision2 = self.isCollision2(self.playerX, self.playerY, bullet[0], bullet[1])
                     if collision2:
-                        explosion_sound = mixer.Sound('explosion.wav')
+                        explosion_sound = mixer.Sound('src/explosion.wav')
                         explosion_sound.play()
                         self.enemy_bullets.remove(bullet)
                         self.hp_self -= 1

@@ -11,16 +11,43 @@ class TextBox:
         self.reveal_index = 0
         self.line_spacing = 5
         self.font = pygame.font.Font(None, 32)
+        self.current_text_index = 0
 
     def set_text(self, text):
-        self.text = text
+        if isinstance(text, list):
+            self.text = text
+            self.current_text_index = 0
+            self.set_current_text()
+        else:
+            self.text = [text]
+            self.set_current_text()
+
+
+    def set_current_text(self):
+        current_text = self.text[self.current_text_index]
         self.rendered_text = []
         self.text_content = []
-        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        wrapped_text = self.wrap_text(current_text, self.rect.width - 20)
         for line in wrapped_text:
             self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
             self.text_content.append(line)
         self.reveal_index = 0
+
+    def wrap_text(self, text, max_width):
+        lines = text.split('\n')
+        wrapped_lines = []
+        for line in lines:
+            words = line.split(' ')
+            current_line = ""
+            for word in words:
+                test_line = current_line + word + " "
+                if self.font.size(test_line)[0] <= max_width:
+                    current_line = test_line
+                else:
+                    wrapped_lines.append(current_line.strip())
+                    current_line = word + " "
+            wrapped_lines.append(current_line.strip())
+        return wrapped_lines
 
     def update(self):
         self.reveal_index += 1
@@ -37,7 +64,13 @@ class TextBox:
                 y += line.get_height() + self.line_spacing
 
     def is_finished(self):
-        return self.reveal_index >= sum(len(line) for line in self.text_content)
+        if self.reveal_index >= sum(len(line) for line in self.text_content):
+            if self.current_text_index < len(self.text) - 1:
+                self.current_text_index += 1
+                self.set_current_text()
+                return False
+            return True
+        return False
 
 
 class Mercury:
@@ -56,13 +89,13 @@ class Mercury:
         pygame.display.set_caption("Trolley Problem")
 
         # Load background image
-        self.background = pygame.image.load('mercury.jpg').convert()
+        self.background = pygame.image.load('src/mercury.jpg').convert()
         self.background = pygame.transform.scale(self.background, (self.screen_width, self.screen_height))
 
-        self.trolley_image = pygame.image.load('trolley.png')
+        self.trolley_image = pygame.image.load('src/trolley.png')
         self.trolley_image = pygame.transform.scale(self.trolley_image, (100, 100))
 
-        self.track_image = pygame.image.load('tracks.png')
+        self.track_image = pygame.image.load('src/tracks.png')
         self.track_image = pygame.transform.scale(self.track_image, (50, 100))
         self.track_image = pygame.transform.rotate(self.track_image, 90)
 
@@ -99,18 +132,20 @@ class Mercury:
         self.game_over = False
 
         # Load and play background music
-        pygame.mixer.music.load('mercurybgm.mp3')
+        pygame.mixer.music.load('src/mercurybgm.mp3')
         pygame.mixer.music.play(-1)  # -1 loops indefinitely, 0 plays once
 
         # Load explosion sound
-        self.explosion_sound = pygame.mixer.Sound('explosion.wav')
+        self.explosion_sound = pygame.mixer.Sound('src/explosion.wav')
 
         # Text box and game state
         self.text_box = TextBox(50, 600, 1100, 150)
         self.game_state = "intro"
-        self.intro_text = "Welcome to Mercury! Your mission is to get past the cave! Choose the right path wisely!"
-        self.victory_text = "Congratulations! You've successfully gone past the cave! Obtained the Taurus gem"
-        self.defeat_text = "Mission failed. Rethink about your choices. Try again!"
+        self.intro_text = "Welcome to Mercury! John, your mission is to get past the cave! Choose the right path wisely!"
+        self.victory_text = ["Congratulations! You've successfully gone past the cave! Obtained the Taurus gem.",
+                            "John! It seems like the alien boss is in the Sun.",
+                             "We need to defeat him and reactivate the shield machine"]
+        self.defeat_text = "Mission failed. Rethink about your choices, John. Try again!"
 
     def draw_trolley(self, x, y):
         self.screen.blit(self.trolley_image, (x - 50, y - 50))

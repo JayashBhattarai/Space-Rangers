@@ -18,11 +18,25 @@ class TextBox:
         self.text = text
         self.rendered_text = []
         self.text_content = []
-        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        wrapped_text = self.wrap_text(text, self.rect.width - 20)
         for line in wrapped_text:
             self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
             self.text_content.append(line)
         self.reveal_index = 0
+
+    def wrap_text(self, text, max_width):
+        words = text.split(' ')
+        wrapped_lines = []
+        current_line = ""
+        for word in words:
+            test_line = current_line + word + " "
+            if self.font.size(test_line)[0] <= max_width:
+                current_line = test_line
+            else:
+                wrapped_lines.append(current_line.strip())
+                current_line = word + " "
+        wrapped_lines.append(current_line.strip())
+        return wrapped_lines
 
     def update(self):
         self.reveal_index += 1
@@ -62,9 +76,9 @@ class Mars:
         pygame.display.set_caption('Volcano Climbing')
 
         # Load images
-        self.player_img = pygame.image.load('ufo.png')
-        self.rock_img = pygame.image.load('rock.png')
-        self.background = pygame.image.load('mars.jpg')
+        self.player_img = pygame.image.load('src/ufo.png')
+        self.rock_img = pygame.image.load('src/rock.png')
+        self.background = pygame.image.load('src/mars.jpg')
 
         # Player settings
         self.player_width = 50
@@ -103,14 +117,14 @@ class Mars:
 
         # Initialize Pygame mixer
         pygame.mixer.init()
-        pygame.mixer.music.load('marsbgm.mp3')
+        pygame.mixer.music.load('src/marsbgm.mp3')
         pygame.mixer.music.play(-1)  # Play music indefinitely
 
         self.text_box = TextBox(50, 600, 1100, 150)
         self.game_state = "intro"
-        self.intro_text = "Welcome to Mars! Your mission is to climb the volcano while avoiding falling rocks. Reach a height of 22,000m to win!"
+        self.intro_text = "Welcome to Mars! John, your mission is to climb the volcano while avoiding falling rocks. Reach a height of 22,000m to win!"
         self.victory_text = "Congratulations! You've successfully climbed the Martian volcano! Obtained the Cancer gem"
-        self.defeat_text = "Mission failed. The falling rocks proved to be too challenging. Try again!"
+        self.defeat_text = "Mission failed. John, don't rush! Try again!"
 
     def show_text(self, text, x, y, font_size=74):
         font = pygame.font.Font(None, font_size)

@@ -18,11 +18,25 @@ class TextBox:
         self.text = text
         self.rendered_text = []
         self.text_content = []
-        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
+        wrapped_text = self.wrap_text(text, self.rect.width - 20)
         for line in wrapped_text:
             self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
             self.text_content.append(line)
         self.reveal_index = 0
+
+    def wrap_text(self, text, max_width):
+        words = text.split(' ')
+        wrapped_lines = []
+        current_line = ""
+        for word in words:
+            test_line = current_line + word + " "
+            if self.font.size(test_line)[0] <= max_width:
+                current_line = test_line
+            else:
+                wrapped_lines.append(current_line.strip())
+                current_line = word + " "
+        wrapped_lines.append(current_line.strip())
+        return wrapped_lines
 
     def update(self):
         self.reveal_index += 1
@@ -55,7 +69,7 @@ class Jupiter:
 
         # Load background image
         try:
-            self.background = pygame.image.load('Jupiterbackground.jpg')
+            self.background = pygame.image.load('src/Jupiterbackground.jpg')
             self.background = pygame.transform.scale(self.background, (self.WIDTH, self.HEIGHT))
         except pygame.error as e:
             print(f"Unable to load background image: {e}")
@@ -64,16 +78,16 @@ class Jupiter:
 
         # Load and play background music
         try:
-            mixer.music.load('Jupiter.mp3')
+            mixer.music.load('src/Jupiter.mp3')
             mixer.music.play(-1)
         except pygame.error as e:
             print(f"Unable to load music file: {e}")
 
         self.text_box = TextBox(50, 600, 1100, 150)
         self.game_state = "intro"
-        self.intro_text = "Welcome to Jupiter! Your mission is to use the scale to find out the weights of the stones."
-        self.victory_text = "Congratulations! You've successfully completed the Jupiter stage!\n Obtained the Libra gem"
-        self.defeat_text = "Mission failed. Is maths too hard for you? Try again!"
+        self.intro_text = "Welcome to Jupiter! John, your mission is to use the scale to find out the correct weights of the stones."
+        self.victory_text = "Congratulations! You've successfully completed the Jupiter stage! Obtained the Libra gem"
+        self.defeat_text = "Mission failed. John, is maths too hard for you? Try again!"
 
         # Colors
         self.WHITE = (255, 255, 255)
@@ -185,7 +199,7 @@ class Jupiter:
         resume_text = self.small_font.render("Press 'R' to Resume", True, self.WHITE)
         self.screen.blit(resume_text, (self.WIDTH // 2 - resume_text.get_width() // 2, self.HEIGHT // 2 - 50))
 
-        restart_text = self.small_font.render("Press 'T' to Restart", True, self.WHITE)
+        restart_text = self.small_font.render("Press 'N' to Restart", True, self.WHITE)
         self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, self.HEIGHT // 2))
 
         quit_text = self.small_font.render("Press 'Q' to Quit", True, self.WHITE)
@@ -213,7 +227,7 @@ class Jupiter:
                     elif self.paused:
                         if event.key == pygame.K_r:
                             self.paused = False
-                        elif event.key == pygame.K_t:
+                        elif event.key == pygame.K_n:
                             self.reset_game()
                             self.paused = False
                         elif event.key == pygame.K_q:
