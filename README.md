@@ -15,4 +15,4 @@ The 'start game' navigates you to level selection screen where there are total o
   Stage Sun: Defeat the alien boss<br>
 Each stages has sound effects and background music<br>
 <br>
-Thw 'space navigation' lets the players to fly a rocket starting from Earth to different parts of the solar system. The solar systme has the Sun and eight planets with visible orbits for the planets.
+The 'space navigation' lets the players to fly a rocket starting from Earth to different parts of the solar system. The solar system has the Sun and eight planets with visible orbits for the planets.
