@@ -1,7 +1,6 @@
 import pygame
 import textwrap
 
-
 class TextBox:
     def __init__(self, x, y, width, height):
         self.rect = pygame.Rect(x, y, width, height)
@@ -21,7 +20,6 @@ class TextBox:
         else:
             self.text = [text]
             self.set_current_text()
-
 
     def set_current_text(self):
         current_text = self.text[self.current_text_index]
@@ -77,8 +75,10 @@ class Mercury:
     def __init__(self):
         pygame.init()
 
-        self.screen_width = 1200
-        self.screen_height = 800
+        # Get the screen info
+        screen_info = pygame.display.Info()
+        self.screen_width = screen_info.current_w
+        self.screen_height = screen_info.current_h
 
         self.white = (255, 255, 255)
         self.black = (0, 0, 0)
@@ -88,20 +88,25 @@ class Mercury:
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
         pygame.display.set_caption("Trolley Problem")
 
-        # Load background image
+        # Load and scale background image
         self.background = pygame.image.load('src/mercury.jpg').convert()
         self.background = pygame.transform.scale(self.background, (self.screen_width, self.screen_height))
 
+        # Load and scale trolley image
         self.trolley_image = pygame.image.load('src/trolley.png')
-        self.trolley_image = pygame.transform.scale(self.trolley_image, (100, 100))
+        trolley_size = int(min(self.screen_width, self.screen_height) * 0.1)
+        self.trolley_image = pygame.transform.scale(self.trolley_image, (trolley_size, trolley_size))
 
+        # Load and scale track image
         self.track_image = pygame.image.load('src/tracks.png')
-        self.track_image = pygame.transform.scale(self.track_image, (50, 100))
+        track_width = int(self.screen_width * 0.04)
+        track_height = int(self.screen_height * 0.1)
+        self.track_image = pygame.transform.scale(self.track_image, (track_width, track_height))
         self.track_image = pygame.transform.rotate(self.track_image, 90)
 
-        self.trolley_x = 50
+        self.trolley_x = int(self.screen_width * 0.05)
         self.trolley_y = self.screen_height // 2
-        self.trolley_speed = 5
+        self.trolley_speed = int(self.screen_width * 0.004)
 
         self.upper_track_y = self.screen_height // 4
         self.lower_track_y = 3 * self.screen_height // 4
@@ -111,7 +116,7 @@ class Mercury:
 
         self.direction = 0
 
-        self.font = pygame.font.SysFont(None, 40)  # Decreased font size to 40
+        self.font = pygame.font.SysFont(None, int(self.screen_height * 0.05))
 
         self.questions = [
             {"question": "Where is the largest Volcano in the Solar System?", "up": "Saturn", "down": "Mars", "correct": "down"},
@@ -139,7 +144,11 @@ class Mercury:
         self.explosion_sound = pygame.mixer.Sound('src/explosion.wav')
 
         # Text box and game state
-        self.text_box = TextBox(50, 600, 1100, 150)
+        text_box_width = int(self.screen_width * 0.9)
+        text_box_height = int(self.screen_height * 0.2)
+        text_box_x = (self.screen_width - text_box_width) // 2
+        text_box_y = int(self.screen_height * 0.75)
+        self.text_box = TextBox(text_box_x, text_box_y, text_box_width, text_box_height)
         self.game_state = "intro"
         self.intro_text = "Welcome to Mercury! John, your mission is to get past the cave! Choose the right path wisely!"
         self.victory_text = ["Congratulations! You've successfully gone past the cave! Obtained the Taurus gem.",
@@ -148,11 +157,11 @@ class Mercury:
         self.defeat_text = "Mission failed. Rethink about your choices, John. Try again!"
 
     def draw_trolley(self, x, y):
-        self.screen.blit(self.trolley_image, (x - 50, y - 50))
+        self.screen.blit(self.trolley_image, (x - self.trolley_image.get_width()//2, y - self.trolley_image.get_height()//2))
 
     def draw_track(self, x, y, angle=0):
         track = pygame.transform.rotate(self.track_image, angle)
-        self.screen.blit(track, (x, y - 25))
+        self.screen.blit(track, (x, y - track.get_height()//2))
 
     def draw_vertical_track(self, x, y_start, y_end):
         if y_start > y_end:
@@ -160,7 +169,7 @@ class Mercury:
         y = y_start
         while y < y_end:
             self.draw_track(x, y, angle=90)
-            y += 50
+            y += self.track_image.get_width()
 
     def draw_text(self, text, x, y):
         screen_text = self.font.render(text, True, self.white)
@@ -168,19 +177,19 @@ class Mercury:
         self.screen.blit(screen_text, text_rect)
 
     def draw_question(self, question_data):
-        self.draw_text(question_data["question"], self.screen_width // 2, 50)
-        self.draw_text("UP: " + question_data["up"], self.screen_width // 2, 110)
-        self.draw_text("DOWN: " + question_data["down"], self.screen_width // 2, 150)
+        self.draw_text(question_data["question"], self.screen_width // 2, int(self.screen_height * 0.05))
+        self.draw_text("UP: " + question_data["up"], self.screen_width // 2, int(self.screen_height * 0.15))
+        self.draw_text("DOWN: " + question_data["down"], self.screen_width // 2, int(self.screen_height * 0.2))
 
     def draw_pause_menu(self):
         s = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         s.fill(self.translucent_gray)
         self.screen.blit(self.background, (0, 0))
 
-        self.draw_text("PAUSE MENU", self.screen_width // 2, self.screen_height // 2 - 100)
+        self.draw_text("PAUSE MENU", self.screen_width // 2, self.screen_height // 2 - int(self.screen_height * 0.1))
         self.draw_text("Press R to Resume", self.screen_width // 2, self.screen_height // 2)
-        self.draw_text("Press T to Retry", self.screen_width // 2, self.screen_height // 2 + 60)
-        self.draw_text("Press Q to Quit", self.screen_width // 2, self.screen_height // 2 + 120)
+        self.draw_text("Press T to Retry", self.screen_width // 2, self.screen_height // 2 + int(self.screen_height * 0.07))
+        self.draw_text("Press Q to Quit", self.screen_width // 2, self.screen_height // 2 + int(self.screen_height * 0.14))
 
     def draw_game_over_menu(self):
         s = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
@@ -188,9 +197,9 @@ class Mercury:
         self.screen.blit(self.background, (0, 0))
 
         self.text_box.draw(self.screen)
-        self.draw_text("CRASH! Game Over.", self.screen_width // 2, self.screen_height // 2 - 100)
+        self.draw_text("CRASH! Game Over.", self.screen_width // 2, self.screen_height // 2 - int(self.screen_height * 0.1))
         self.draw_text("Press T to Retry", self.screen_width // 2, self.screen_height // 2)
-        self.draw_text("Press Q to Quit", self.screen_width // 2, self.screen_height // 2 + 60)
+        self.draw_text("Press Q to Quit", self.screen_width // 2, self.screen_height // 2 + int(self.screen_height * 0.07))
 
     def draw_congratulations_menu(self):
         s = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
@@ -198,12 +207,12 @@ class Mercury:
         self.screen.blit(self.background, (0, 0))
 
         self.text_box.draw(self.screen)
-        self.draw_text("Congratulations! You won!", self.screen_width // 2, self.screen_height // 2 - 100)
+        self.draw_text("Congratulations! You won!", self.screen_width // 2, self.screen_height // 2 - int(self.screen_height * 0.1))
         self.draw_text("Press T to Retry", self.screen_width // 2, self.screen_height // 2)
-        self.draw_text("Press Q to Quit", self.screen_width // 2, self.screen_height // 2 + 60)
+        self.draw_text("Press Q to Quit", self.screen_width // 2, self.screen_height // 2 + int(self.screen_height * 0.07))
 
     def reset_game(self):
-        self.trolley_x = 50
+        self.trolley_x = int(self.screen_width * 0.05)
         self.trolley_y = self.middle_track_y
         self.current_question = 0
         self.show_question = False
@@ -311,8 +320,8 @@ class Mercury:
                     self.incorrect = True
 
             if not self.show_question and not self.paused and not self.show_pause_menu:
-                if self.trolley_x >= self.screen_width - 50:
-                    self.trolley_x = 50
+                if self.trolley_x >= self.screen_width - self.trolley_image.get_width():
+                    self.trolley_x = int(self.screen_width * 0.05)
                     self.trolley_y = self.middle_track_y
                     self.at_divergence = False
                     if self.incorrect:
@@ -333,14 +342,15 @@ class Mercury:
                     self.game_state = "defeat"
                     self.text_box.set_text(self.defeat_text)
 
-            # Draw background
+                # Draw background
             self.screen.blit(self.background, (0, 0))
 
             if self.game_state == "intro":
                 self.text_box.update()
                 self.text_box.draw(self.screen)
             elif self.game_state == "playing":
-                for x in range(0, self.screen_width, 50):
+                track_spacing = int(self.screen_width * 0.04)
+                for x in range(0, self.screen_width, track_spacing):
                     if x < self.divergence_x:
                         self.draw_track(x, self.middle_track_y)
                     if x >= self.divergence_x:
@@ -356,7 +366,8 @@ class Mercury:
                     self.draw_question(self.questions[self.current_question])
 
                 if not self.show_question and not self.paused and not self.show_pause_menu:
-                    self.draw_text("Press UP or DOWN to choose track", self.screen_width // 2, 50)
+                    self.draw_text("Press UP or DOWN to choose track", self.screen_width // 2,
+                                   int(self.screen_height * 0.05))
 
                 if self.show_pause_menu:
                     self.draw_pause_menu()

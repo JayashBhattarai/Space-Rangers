@@ -4,7 +4,12 @@ import pygame
 
 pygame.init()
 
-WIDTH, HEIGHT = 1200, 800
+info = pygame.display.Info()
+screen_width = info.current_w
+screen_height = info.current_h
+
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Main Menu")
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -15,75 +20,64 @@ TITLE_FONT = pygame.font.Font(None, 74)
 MENU_FONT = pygame.font.Font(None, 50)
 
 background = pygame.image.load("src/background.png")
+background = pygame.transform.scale(background, (screen_width, screen_height))
 
 # Load and play background music
 mixer.music.load('src/main.mp3')
 mixer.music.play(-1)
-
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Main Menu")
 
 main_menu_options = ["Start Game", "Space Navigation", "Quit"]
 level_options = ["Stage 0 Prologue", "Stage 1 Earth", "Stage 2 Mars", "Stage 3 Venus", "Stage 4 Jupiter", "Stage 5 Saturn",
                  "Stage 6 Uranus", "Stage 7 Neptune", "Stage 8 Mercury", "Stage 9 Sun", "Stage Final Epilogue"]
 selected_option = 0
 
-
 def draw_main_menu():
     screen.blit(background, (0, 0))
 
     title_surface = TITLE_FONT.render("SPACE RANGERS", True, WHITE)
-    title_rect = title_surface.get_rect(center=(WIDTH / 2, HEIGHT / 4))
+    title_rect = title_surface.get_rect(center=(screen_width / 2, screen_height / 4))
     screen.blit(title_surface, title_rect)
 
-    # Draw the menu options
     for i, option in enumerate(main_menu_options):
         color = WHITE if i == selected_option else GRAY
         text_surface = MENU_FONT.render(option, True, color)
-        text_rect = text_surface.get_rect(center=(WIDTH / 2, HEIGHT / 2 + i * 75))
+        text_rect = text_surface.get_rect(center=(screen_width / 2, screen_height / 2 + i * 75))
         screen.blit(text_surface, text_rect)
 
     pygame.display.flip()
-
 
 def draw_level_selection_menu():
     screen.blit(background, (0, 0))
 
     title_surface = TITLE_FONT.render("Level Selection", True, WHITE)
-    title_rect = title_surface.get_rect(center=(WIDTH / 2, HEIGHT / 4))
+    title_rect = title_surface.get_rect(center=(screen_width / 2, screen_height / 4))
     screen.blit(title_surface, title_rect)
 
-    # Divide the levels into two groups
     levels_left = level_options[:5]
     levels_right = level_options[5:10]
     level_bottom = [level_options[10]]
 
-    # Calculate vertical position for the columns
-    vertical_position = HEIGHT / 2 - 75  # Start higher than the center
+    vertical_position = screen_height / 2 - 75
 
-    # Draw the left column of levels
     for i, option in enumerate(levels_left):
-        color = WHITE if i == selected_option and selected_option < 6 else GRAY
+        color = WHITE if i == selected_option and selected_option < 5 else GRAY
         text_surface = MENU_FONT.render(option, True, color)
-        text_rect = text_surface.get_rect(center=(WIDTH / 3, vertical_position + i * 60))
+        text_rect = text_surface.get_rect(center=(screen_width / 3, vertical_position + i * 60))
         screen.blit(text_surface, text_rect)
 
-    # Draw the right column of levels
     for i, option in enumerate(levels_right):
         color = WHITE if i + 5 == selected_option else GRAY
         text_surface = MENU_FONT.render(option, True, color)
-        text_rect = text_surface.get_rect(center=(2 * WIDTH / 3, vertical_position + i * 60))
+        text_rect = text_surface.get_rect(center=(2 * screen_width / 3, vertical_position + i * 60))
         screen.blit(text_surface, text_rect)
 
-    # Draw the bottom center level
     for i, option in enumerate(level_bottom):
         color = WHITE if i + 10 == selected_option else GRAY
         text_surface = MENU_FONT.render(option, True, color)
-        text_rect = text_surface.get_rect(center=(WIDTH / 2, HEIGHT - 150))
+        text_rect = text_surface.get_rect(center=(screen_width / 2, screen_height - 150))
         screen.blit(text_surface, text_rect)
 
     pygame.display.flip()
-
 
 def main_screen():
     global selected_option
@@ -92,7 +86,6 @@ def main_screen():
 
     running = True
     while running:
-        # Play music only when in main menu and not already playing
         if current_screen == "main_menu" and not music_playing:
             mixer.music.load('src/main.mp3')
             mixer.music.play(-1)
@@ -203,9 +196,7 @@ def main_screen():
         elif current_screen == "level_selection":
             draw_level_selection_menu()
 
-    # Stop the music when exiting the main menu
     mixer.music.stop()
-
 
 if __name__ == "__main__":
     main_screen()

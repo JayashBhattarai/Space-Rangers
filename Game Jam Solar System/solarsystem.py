@@ -5,6 +5,7 @@ import os
 import random
 from pygame import mixer
 from mainscreen import main_screen
+import ctypes
 
 
 def load_image(name):
@@ -16,9 +17,15 @@ class SolarSystem:
         # Initialize Pygame
         pygame.init()
 
-        # Constants
-        self.WIDTH, self.HEIGHT = 1200, 800
-        self.MINIMAP_WIDTH, self.MINIMAP_HEIGHT = 200, 200
+        # Get the screen size
+        user32 = ctypes.windll.user32
+        self.WIDTH = user32.GetSystemMetrics(0)
+        self.HEIGHT = user32.GetSystemMetrics(1)
+
+        # Adjust minimap size based on screen dimensions
+        self.MINIMAP_WIDTH = int(self.WIDTH * 0.15)
+        self.MINIMAP_HEIGHT = int(self.HEIGHT * 0.15)
+
         self.WHITE = (255, 255, 255)
         self.BLACK = (0, 0, 0)
         self.GREY = (169, 169, 169)
@@ -41,16 +48,17 @@ class SolarSystem:
         # Rotate spaceship image 45 degrees clockwise
         self.images['spaceship'] = pygame.transform.rotate(self.images['spaceship'], -45)
 
-        # Orbital details: (distance from sun, radius, speed)
+        # Adjust orbital details based on screen size
+        scale_factor = min(self.WIDTH, self.HEIGHT) / 800
         self.PLANETS = {
-            'mercury': (1500, 20, 0.0005),
-            'venus': (3000, 35, 0.0004),
-            'earth': (4500, 40, 0.0003),
-            'mars': (6000, 30, 0.00025),
-            'jupiter': (9000, 70, 0.0002),
-            'saturn': (12000, 60, 0.00015),
-            'uranus': (15000, 50, 0.0001),
-            'neptune': (18000, 50, 0.00008),
+            'mercury': (1500 * scale_factor, 20 * scale_factor, 0.0005),
+            'venus': (3000 * scale_factor, 35 * scale_factor, 0.0004),
+            'earth': (4500 * scale_factor, 40 * scale_factor, 0.0003),
+            'mars': (6000 * scale_factor, 30 * scale_factor, 0.00025),
+            'jupiter': (9000 * scale_factor, 70 * scale_factor, 0.0002),
+            'saturn': (12000 * scale_factor, 60 * scale_factor, 0.00015),
+            'uranus': (15000 * scale_factor, 50 * scale_factor, 0.0001),
+            'neptune': (18000 * scale_factor, 50 * scale_factor, 0.00008),
         }
 
         # Setup display
@@ -60,12 +68,12 @@ class SolarSystem:
 
         # Sun's details
         self.sun_pos = (0, 0)
-        self.sun_radius = 100
+        self.sun_radius = 100 * scale_factor
 
         # Spaceship details
-        self.spaceship_pos = [4500, 0]  # Start near Earth
-        self.spaceship_speed = 7
-        self.spaceship_radius = 25
+        self.spaceship_pos = [4500 * scale_factor, 0]  # Start near Earth
+        self.spaceship_speed = 7 * scale_factor
+        self.spaceship_radius = 25 * scale_factor
         self.spaceship_angle = 0  # Angle in radians, 0 is now pointing right
         self.rotation_speed = 0.1  # Radians per frame
 
@@ -77,8 +85,8 @@ class SolarSystem:
         # Create starry background
         self.starry_background = self.create_starry_background()
 
-        self.font = pygame.font.Font(None, 74)
-        self.small_font = pygame.font.Font(None, 36)
+        self.font = pygame.font.Font(None, int(74 * scale_factor))
+        self.small_font = pygame.font.Font(None, int(36 * scale_factor))
 
         # Pause state
         self.paused = False
@@ -86,11 +94,15 @@ class SolarSystem:
     def create_starry_background(self):
         background = pygame.Surface((self.WIDTH, self.HEIGHT))
         background.fill(self.BLACK)
-        for _ in range(200):  # Adjust the number of stars as needed
+        for _ in range(300):  # Increased number of stars
             x = random.randint(0, self.WIDTH)
             y = random.randint(0, self.HEIGHT)
-            brightness = random.randint(50, 150)
-            background.set_at((x, y), (brightness, brightness, brightness))
+            brightness = random.randint(100, 255)  # Increased minimum brightness
+            star_size = random.choice([1, 1, 1, 2])  # Most stars are 1 pixel, some are 2
+            if star_size == 1:
+                background.set_at((x, y), (brightness, brightness, brightness))
+            else:
+                pygame.draw.circle(background, (brightness, brightness, brightness), (x, y), star_size)
         return background
 
     def draw_orbits(self, offset_x, offset_y):

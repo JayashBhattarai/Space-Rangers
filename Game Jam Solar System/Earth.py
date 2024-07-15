@@ -10,8 +10,8 @@ class TextBox:
         self.rendered_text = []
         self.text_content = []
         self.reveal_index = 0
-        self.line_spacing = 5
-        self.font = pygame.font.Font(None, 32)
+        self.line_spacing = 10
+        self.font = pygame.font.Font(None, 40)
 
     def set_text(self, text):
         self.text = text
@@ -62,8 +62,10 @@ class Earth:
         mixer.init()
 
         # Set up the display
-        self.WIDTH = 1200
-        self.HEIGHT = 800
+        info = pygame.display.Info()
+        self.WIDTH = info.current_w
+        self.HEIGHT = info.current_h
+
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("2D Airplane Dodge")
 
@@ -103,7 +105,7 @@ class Earth:
         # Create initial buildings
         self.create_buildings()
 
-        self.text_box = TextBox(50, 600, 1100, 150)
+        self.text_box = TextBox(50, self.HEIGHT-250, self.WIDTH-100, 200)
         self.game_state = "intro"
         self.intro_text = "Here we are! John, your mission is to navigate through the city. Avoid buildings and reach a score of 20 to win!"
         self.victory_text = "Congratulations! You've successfully completed the Earth stage! Obtained the Aries gem"
@@ -137,22 +139,22 @@ class Earth:
             self.buildings.append({'x': x, 'y': y, 'height': height})
 
     def draw_pause_menu(self):
-        font = pygame.font.Font(None, 64)
+        font = pygame.font.Font(None, 72)
         pause_text = font.render("Paused", True, self.DARK_GRAY)
         resume_text = font.render("Resume (Press R)", True, self.DARK_GRAY)
         restart_text = font.render("Restart (Press N)", True, self.DARK_GRAY)
         quit_text = font.render("Quit (Press Q)", True, self.DARK_GRAY)
 
-        menu_width = 400
-        menu_height = 300
+        menu_width = 600
+        menu_height = 400
         menu_x = (self.WIDTH - menu_width) // 2
         menu_y = (self.HEIGHT - menu_height) // 2
 
         pygame.draw.rect(self.screen, self.WHITE, (menu_x, menu_y, menu_width, menu_height))
-        self.screen.blit(pause_text, (self.WIDTH // 2 - pause_text.get_width() // 2, menu_y + 30))
-        self.screen.blit(resume_text, (self.WIDTH // 2 - resume_text.get_width() // 2, menu_y + 100))
-        self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, menu_y + 170))
-        self.screen.blit(quit_text, (self.WIDTH // 2 - quit_text.get_width() // 2, menu_y + 240))
+        self.screen.blit(pause_text, (self.WIDTH // 2 - pause_text.get_width() // 2, menu_y + 50))
+        self.screen.blit(resume_text, (self.WIDTH // 2 - resume_text.get_width() // 2, menu_y + 150))
+        self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, menu_y + 250))
+        self.screen.blit(quit_text, (self.WIDTH // 2 - quit_text.get_width() // 2, menu_y + 350))
 
     def main(self):
         clock = pygame.time.Clock()
@@ -253,9 +255,9 @@ class Earth:
                 self.draw_airplane(self.screen, self.player_x, self.player_y)
 
                 # Draw score
-                font = pygame.font.Font(None, 48)
+                font = pygame.font.Font(None, 72)
                 score_text = font.render(f"Score: {self.score}", True, self.WHITE)
-                self.screen.blit(score_text, (20, 20))
+                self.screen.blit(score_text, (30, 30))
 
             elif self.game_state in ["victory", "defeat"]:
                 # Game over or Victory screen
@@ -263,7 +265,7 @@ class Earth:
                                  (self.WIDTH // 4, self.HEIGHT // 4, self.WIDTH // 2, self.HEIGHT // 2))
 
                 # Main game over text
-                font_large = pygame.font.Font(None, 64)
+                font_large = pygame.font.Font(None, 96)
                 if victory:
                     game_over_text = font_large.render("Congratulations!", True, self.GREEN)
                 else:
@@ -272,14 +274,14 @@ class Earth:
                                                   self.HEIGHT // 3 - game_over_text.get_height() // 2))
 
                 # Restart and Quit options
-                font_small = pygame.font.Font(None, 36)
+                font_small = pygame.font.Font(None, 54)
                 restart_text = font_small.render("Press R to Restart", True, self.DARK_GRAY)
                 quit_text = font_small.render("Press Q to Quit", True, self.DARK_GRAY)
                 self.screen.blit(restart_text,
                                  (self.WIDTH // 2 - restart_text.get_width() // 2,
-                                  self.HEIGHT // 3 + game_over_text.get_height() + 30))
+                                  self.HEIGHT // 3 + game_over_text.get_height() + 50))
                 self.screen.blit(quit_text, (self.WIDTH // 2 - quit_text.get_width() // 2,
-                                             self.HEIGHT // 3 + game_over_text.get_height() + restart_text.get_height() + 80))
+                                             self.HEIGHT // 3 + game_over_text.get_height() + restart_text.get_height() + 100))
 
                 # Display the text box with victory/defeat text
                 self.text_box.update()

@@ -3,14 +3,15 @@ import random
 import textwrap
 
 class TextBox:
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
+    def __init__(self, x, y, width, height, screen_width, screen_height):
+        self.rect = pygame.Rect(int(x * screen_width), int(y * screen_height),
+                                int(width * screen_width), int(height * screen_height))
         self.text = ""
         self.rendered_text = []
         self.text_content = []
         self.reveal_index = 0
         self.line_spacing = 5
-        self.font = pygame.font.Font(None, 32)
+        self.font = pygame.font.Font(None, int(screen_height * 0.04))
 
     def set_text(self, text):
         self.text = text
@@ -60,11 +61,13 @@ class Venus:
         pygame.init()
 
         # Screen setup
-        self.WIDTH, self.HEIGHT = 1200, 800
+        info = pygame.display.Info()
+        self.WIDTH, self.HEIGHT = info.current_w, info.current_h
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Zodiac Memory Card Game")
 
         self.background = pygame.image.load('src/venus.jpg')
+        self.background = pygame.transform.scale(self.background, (self.WIDTH, self.HEIGHT))
 
         # Colors
         self.WHITE = (255, 255, 255)
@@ -75,8 +78,9 @@ class Venus:
         self.SEMI_TRANSPARENT_BLACK = (0, 0, 0, 128)
 
         # Card dimensions
-        self.CARD_WIDTH, self.CARD_HEIGHT = 100, 150
-        self.CARD_MARGIN = 20
+        self.CARD_WIDTH = int(self.WIDTH * 0.08)
+        self.CARD_HEIGHT = int(self.HEIGHT * 0.15)
+        self.CARD_MARGIN = int(self.WIDTH * 0.01)
 
         # Zodiac signs
         self.ZODIAC_SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo"]
@@ -97,9 +101,9 @@ class Venus:
         self.paused = False
 
         # Font setup
-        self.font = pygame.font.Font(None, 36)
-        self.card_font = pygame.font.Font(None, 24)
-        self.congrats_font = pygame.font.Font(None, 48)
+        self.font = pygame.font.Font(None, int(self.HEIGHT * 0.045))
+        self.card_font = pygame.font.Font(None, int(self.HEIGHT * 0.03))
+        self.congrats_font = pygame.font.Font(None, int(self.HEIGHT * 0.06))
 
         # Initialize mixer and load background music
         pygame.mixer.init()
@@ -107,7 +111,7 @@ class Venus:
         pygame.mixer.music.set_volume(0.1)  # Set initial volume (0.0 to 1.0)
         pygame.mixer.music.play(-1)  # -1 makes the music loop indefinitely
 
-        self.text_box = TextBox(50, 600, 1100, 150)
+        self.text_box = TextBox(0.04, 0.75, 0.92, 0.19, self.WIDTH, self.HEIGHT)
         self.game_state = "intro"
         self.intro_text = "Welcome to Venus! John, your mission is to match the cards with same zodiac name"
         self.victory_text = "Congratulations! You've successfully matched all the cards! Obtained the Gemini and the Virgo gem. John! It seems like we can not go to Mercury because of the heat barrier. We need to find Aquarius and Pisces to go through it!"

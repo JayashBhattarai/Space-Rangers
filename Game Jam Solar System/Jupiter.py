@@ -5,14 +5,15 @@ import textwrap
 
 
 class TextBox:
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
+    def __init__(self, x, y, width, height, screen_width, screen_height):
+        self.rect = pygame.Rect(int(x * screen_width), int(y * screen_height),
+                                int(width * screen_width), int(height * screen_height))
         self.text = ""
         self.rendered_text = []
         self.text_content = []
         self.reveal_index = 0
         self.line_spacing = 5
-        self.font = pygame.font.Font(None, 32)
+        self.font = pygame.font.Font(None, int(screen_height * 0.04))
 
     def set_text(self, text):
         self.text = text
@@ -60,10 +61,8 @@ class Jupiter:
     def __init__(self):
         # Initialize Pygame
         pygame.init()
-
-        # Set up the display
-        self.WIDTH = 1200
-        self.HEIGHT = 800
+        info = pygame.display.Info()
+        self.WIDTH, self.HEIGHT = info.current_w, info.current_h
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Balance the Stones")
 
@@ -83,7 +82,7 @@ class Jupiter:
         except pygame.error as e:
             print(f"Unable to load music file: {e}")
 
-        self.text_box = TextBox(50, 600, 1100, 150)
+        self.text_box = TextBox(0.04, 0.75, 0.92, 0.19, self.WIDTH, self.HEIGHT)
         self.game_state = "intro"
         self.intro_text = "Welcome to Jupiter! John, your mission is to use the scale to find out the correct weights of the stones."
         self.victory_text = "Congratulations! You've successfully completed the Jupiter stage! Obtained the Libra gem"
@@ -101,8 +100,8 @@ class Jupiter:
         self.PINK = (238, 25, 91, 255)
 
         # Fonts
-        self.font = pygame.font.Font(None, 74)
-        self.small_font = pygame.font.Font(None, 36)
+        self.font = pygame.font.Font(None, int(self.HEIGHT * 0.09))
+        self.small_font = pygame.font.Font(None, int(self.HEIGHT * 0.045))
 
         # Fixed weights for the stones
         self.gold_weight = 7
@@ -117,9 +116,15 @@ class Jupiter:
         # Initialize stones
         self.stones = []
         for i in range(10):
-            self.stones.append(self.Stone(100 + random.randint(-20, 20), 700 + random.randint(-20, 20), self.GOLD, self.gold_weight))
-            self.stones.append(self.Stone(200 + random.randint(-20, 20), 700 + random.randint(-20, 20), self.SILVER, self.silver_weight))
-            self.stones.append(self.Stone(300 + random.randint(-20, 20), 700 + random.randint(-20, 20), self.COPPER, self.copper_weight))
+            self.stones.append(
+                self.Stone(0.08 + random.uniform(-0.02, 0.02), 0.875 + random.uniform(-0.025, 0.025), self.GOLD,
+                           self.gold_weight, self.WIDTH, self.HEIGHT))
+            self.stones.append(
+                self.Stone(0.17 + random.uniform(-0.02, 0.02), 0.875 + random.uniform(-0.025, 0.025), self.SILVER,
+                           self.silver_weight, self.WIDTH, self.HEIGHT))
+            self.stones.append(
+                self.Stone(0.25 + random.uniform(-0.02, 0.02), 0.875 + random.uniform(-0.025, 0.025), self.COPPER,
+                           self.copper_weight, self.WIDTH, self.HEIGHT))
 
         self.left_weight = 0
         self.right_weight = 0
@@ -130,49 +135,61 @@ class Jupiter:
         self.correct = False
 
     class Stone:
-        def __init__(self, x, y, color, weight):
-            self.x = x
-            self.y = y
+        def __init__(self, x, y, color, weight, screen_width, screen_height):
+            self.x = int(x * screen_width)
+            self.y = int(y * screen_height)
             self.color = color
             self.weight = weight
+            self.radius = int(0.025 * screen_width)  # Adjust as needed
             self.dragging = False
             self.side = None
 
         def draw(self, screen):
-            pygame.draw.circle(screen, self.color, (self.x, self.y), 20)
+            pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
 
         def is_mouse_on_stone(self, pos):
-            return (self.x - pos[0]) ** 2 + (self.y - pos[1]) ** 2 < 20 ** 2
+            return (self.x - pos[0]) ** 2 + (self.y - pos[1]) ** 2 < self.radius ** 2
 
     def draw_scales(self, left_weight, right_weight):
-        # Calculate the tilt based on the weight difference
         weight_difference = right_weight - left_weight
-        max_tilt = 50  # Maximum tilt in pixels
-        tilt = max(-max_tilt, min(max_tilt, weight_difference * 5))  # Adjust the factor for more sensitivity
+        max_tilt = int(0.0625 * self.HEIGHT)  # Maximum tilt
+        tilt = max(-max_tilt, min(max_tilt, weight_difference * int(0.00625 * self.HEIGHT)))
 
-        left_scale_y = 400 - tilt
-        right_scale_y = 400 + tilt
+        left_scale_y = int(0.5 * self.HEIGHT) - tilt
+        right_scale_y = int(0.5 * self.HEIGHT) + tilt
 
         # Base
-        pygame.draw.rect(self.screen, self.PINK, (500, 500, 200, 20))
+        pygame.draw.rect(self.screen, self.PINK, (
+        int(0.417 * self.WIDTH), int(0.625 * self.HEIGHT), int(0.167 * self.WIDTH), int(0.025 * self.HEIGHT)))
 
         # Left scale
-        pygame.draw.rect(self.screen, self.PINK, (200, left_scale_y, 200, 20))
-        pygame.draw.rect(self.screen, self.PINK, (300, left_scale_y - 100, 10, 100))
+        pygame.draw.rect(self.screen, self.PINK,
+                         (int(0.167 * self.WIDTH), left_scale_y, int(0.167 * self.WIDTH), int(0.025 * self.HEIGHT)))
+        pygame.draw.rect(self.screen, self.PINK, (
+        int(0.25 * self.WIDTH), left_scale_y - int(0.125 * self.HEIGHT), int(0.008 * self.WIDTH),
+        int(0.125 * self.HEIGHT)))
 
         # Right scale
-        pygame.draw.rect(self.screen, self.PINK, (800, right_scale_y, 200, 20))
-        pygame.draw.rect(self.screen, self.PINK, (900, right_scale_y - 100, 10, 100))
+        pygame.draw.rect(self.screen, self.PINK,
+                         (int(0.667 * self.WIDTH), right_scale_y, int(0.167 * self.WIDTH), int(0.025 * self.HEIGHT)))
+        pygame.draw.rect(self.screen, self.PINK, (
+        int(0.75 * self.WIDTH), right_scale_y - int(0.125 * self.HEIGHT), int(0.008 * self.WIDTH),
+        int(0.125 * self.HEIGHT)))
 
         # Center pillar
-        pygame.draw.rect(self.screen, self.PINK, (590, 300, 20, 200))
+        pygame.draw.rect(self.screen, self.PINK, (
+        int(0.492 * self.WIDTH), int(0.375 * self.HEIGHT), int(0.017 * self.WIDTH), int(0.25 * self.HEIGHT)))
 
         # Arms
-        pygame.draw.line(self.screen, self.PINK, (600, left_scale_y + 10), (300, left_scale_y + 10), 5)
-        pygame.draw.line(self.screen, self.PINK, (600, right_scale_y + 10), (900, right_scale_y + 10), 5)
+        pygame.draw.line(self.screen, self.PINK, (int(0.5 * self.WIDTH), left_scale_y + int(0.0125 * self.HEIGHT)),
+                         (int(0.25 * self.WIDTH), left_scale_y + int(0.0125 * self.HEIGHT)), int(0.00625 * self.HEIGHT))
+        pygame.draw.line(self.screen, self.PINK, (int(0.5 * self.WIDTH), right_scale_y + int(0.0125 * self.HEIGHT)),
+                         (int(0.75 * self.WIDTH), right_scale_y + int(0.0125 * self.HEIGHT)),
+                         int(0.00625 * self.HEIGHT))
 
         # Balance line
-        pygame.draw.line(self.screen, self.BLACK, (600, left_scale_y + 10), (600, right_scale_y + 10), 2)
+        pygame.draw.line(self.screen, self.BLACK, (int(0.5 * self.WIDTH), left_scale_y + int(0.0125 * self.HEIGHT)),
+                         (int(0.5 * self.WIDTH), right_scale_y + int(0.0125 * self.HEIGHT)), int(0.0025 * self.HEIGHT))
 
     def reset_game(self):
         self.left_weight = 0
@@ -288,10 +305,10 @@ class Jupiter:
                         elif self.current_stone.side == "right":
                             self.right_weight -= self.current_stone.weight
 
-                        if 200 <= self.current_stone.x <= 400 and 300 <= self.current_stone.y <= 500:
+                        if 0.167 * self.WIDTH <= self.current_stone.x <= 0.333 * self.WIDTH and 0.375 * self.HEIGHT <= self.current_stone.y <= 0.625 * self.HEIGHT:
                             self.left_weight += self.current_stone.weight
                             self.current_stone.side = "left"
-                        elif 800 <= self.current_stone.x <= 1000 and 300 <= self.current_stone.y <= 500:
+                        elif 0.667 * self.WIDTH <= self.current_stone.x <= 0.833 * self.WIDTH and 0.375 * self.HEIGHT <= self.current_stone.y <= 0.625 * self.HEIGHT:
                             self.right_weight += self.current_stone.weight
                             self.current_stone.side = "right"
                         else:
@@ -313,9 +330,16 @@ class Jupiter:
                 self.pause_menu()
             elif self.game_state == "playing":
                 if not self.entering_guesses and not self.game_over:
-                    pygame.draw.rect(self.screen, self.GOLD, (50, 650, 100, 100))
-                    pygame.draw.rect(self.screen, self.SILVER, (150, 650, 100, 100))
-                    pygame.draw.rect(self.screen, self.COPPER, (250, 650, 100, 100))
+                    self.gold_rect = pygame.Rect(int(0.03 * self.WIDTH), int(0.81 * self.HEIGHT),
+                                                 int(0.11 * self.WIDTH), int(0.15 * self.HEIGHT))
+                    self.silver_rect = pygame.Rect(int(0.125 * self.WIDTH), int(0.81 * self.HEIGHT),
+                                                   int(0.11 * self.WIDTH), int(0.15 * self.HEIGHT))
+                    self.copper_rect = pygame.Rect(int(0.21 * self.WIDTH), int(0.81 * self.HEIGHT),
+                                                   int(0.11 * self.WIDTH), int(0.15 * self.HEIGHT))
+
+                    pygame.draw.rect(self.screen, self.GOLD, self.gold_rect)
+                    pygame.draw.rect(self.screen, self.SILVER, self.silver_rect)
+                    pygame.draw.rect(self.screen, self.COPPER, self.copper_rect)
 
                     self.draw_scales(self.left_weight, self.right_weight)
 

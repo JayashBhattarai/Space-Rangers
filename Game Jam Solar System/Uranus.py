@@ -7,14 +7,14 @@ from pygame import mixer
 
 
 class TextBox:
-    def __init__(self, x, y, width, height):
+    def __init__(self, x, y, width, height, font_size):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = ""
         self.rendered_text = []
         self.text_content = []
         self.reveal_index = 0
-        self.line_spacing = 5
-        self.font = pygame.font.Font(None, 32)
+        self.line_spacing = int(height * 0.05)
+        self.font = pygame.font.Font(None, font_size)
 
     def set_text(self, text):
         self.text = text
@@ -64,12 +64,14 @@ class Uranus:
         pygame.init()
 
         # Screen dimensions
-        self.WIDTH, self.HEIGHT = 1200, 800
+        info = pygame.display.Info()
+        self.WIDTH, self.HEIGHT = info.current_w, info.current_h
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Balloon Pop Game")
 
         # Load background image
         self.background = pygame.image.load('src/uranus.jpg')
+        self.background = pygame.transform.scale(self.background, (self.WIDTH, self.HEIGHT))
 
         # Load pop sound
         self.pop_sound = pygame.mixer.Sound('src/pop.mp3')
@@ -85,9 +87,13 @@ class Uranus:
         self.BLACK = (0, 0, 0)
 
         # Font
-        self.font = pygame.font.Font(None, 74)
-        self.small_font = pygame.font.Font(None, 36)
-        self.menu_font = pygame.font.Font(None, 48)
+        self.font_size = int(self.HEIGHT * 0.05)
+        self.small_font_size = int(self.HEIGHT * 0.03)
+        self.menu_font_size = int(self.HEIGHT * 0.04)
+
+        self.font = pygame.font.Font(None, self.font_size)
+        self.small_font = pygame.font.Font(None, self.small_font_size)
+        self.menu_font = pygame.font.Font(None, self.menu_font_size)
 
         # Initialize game variables
         self.game_over = False
@@ -99,15 +105,18 @@ class Uranus:
         self.player_score = 0
 
         # Bow variables
-        self.bow_x, self.bow_y = self.WIDTH // 2, self.HEIGHT - 50
-        self.bow_length = 50
+        self.bow_x, self.bow_y = self.WIDTH // 2, self.HEIGHT - int(self.HEIGHT * 0.05)
+        self.bow_length = int(self.WIDTH * 0.05)
 
         # Pause menu options
         self.menu_options = ["Resume (ESC)", "Restart (R)", "Quit (Q)"]
         self.selected_option = 0
 
         # Text box and game state
-        self.text_box = TextBox(50, 600, 1100, 150)
+        text_box_height = int(self.HEIGHT * 0.2)
+        self.text_box = TextBox(int(self.WIDTH * 0.05), self.HEIGHT - text_box_height - int(self.HEIGHT * 0.05),
+                                int(self.WIDTH * 0.9), text_box_height, int(self.HEIGHT * 0.03))
+
         self.game_state = "intro"
         self.intro_text = "Welcome to Uranus! John, your mission is to pop only the RED balloons! Don't miss a single shot!"
         self.victory_text = "Congratulations! You've successfully popped all the RED balloons! Obtained the Sagittarius gem"
@@ -118,7 +127,7 @@ class Uranus:
             self.x = x
             self.y = y
             self.color = color
-            self.radius = 30
+            self.radius = int(parent.WIDTH * 0.025)
             self.speed = random.uniform(1, 3)
             self.direction = random.uniform(0, 2 * math.pi)
             self.parent = parent
@@ -136,26 +145,29 @@ class Uranus:
             pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
 
     class Arrow:
-        def __init__(self, x, y, target_x, target_y, color):
+        def __init__(self, x, y, target_x, target_y, color, parent):
             self.x = x
             self.y = y
             self.target_x = target_x
             self.target_y = target_y
             self.color = color
-            self.speed = 10
+            self.speed = parent.WIDTH * 0.01
             angle = math.atan2(target_y - y, target_x - x)
             self.dx = math.cos(angle) * self.speed
             self.dy = math.sin(angle) * self.speed
+            self.parent = parent
 
         def move(self):
             self.x += self.dx
             self.y += self.dy
 
         def draw(self, screen):
+            arrow_length = int(self.parent.WIDTH * 0.03)
+            arrow_width = int(self.parent.HEIGHT * 0.01)
             points = [
                 (self.x, self.y),
-                (self.x - 20, self.y - 10),
-                (self.x - 20, self.y + 10),
+                (self.x - arrow_length, self.y - arrow_width),
+                (self.x - arrow_length, self.y + arrow_width),
             ]
             pygame.draw.polygon(screen, self.color, points)
 
@@ -171,7 +183,7 @@ class Uranus:
         self.screen.blit(text, (self.WIDTH // 2 - text.get_width() // 2, self.HEIGHT // 2 - text.get_height() // 2))
         if sub_message:
             sub_text = self.small_font.render(sub_message, True, self.BLACK)
-            self.screen.blit(sub_text, (self.WIDTH // 2 - sub_text.get_width() // 2, self.HEIGHT // 2 - sub_text.get_height() // 2 + 100))
+            self.screen.blit(sub_text, (self.WIDTH // 2 - sub_text.get_width() // 2, self.HEIGHT // 2 + text.get_height()))
 
     def show_game_over(self):
         self.display_message("Game Over!", "Press R to retry or Q to quit")
@@ -190,18 +202,16 @@ class Uranus:
         self.game_state = "playing"
 
     def draw_pause_menu(self):
-        # Draw translucent background
         overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))  # Translucent black
         self.screen.blit(overlay, (0, 0))
 
-        # Draw menu options
         for idx, option in enumerate(self.menu_options):
             text_surface = self.menu_font.render(option, True, self.WHITE)
-            x, y = self.WIDTH // 2 - text_surface.get_width() // 2, self.HEIGHT // 2 - 50 + idx * 50
+            x = self.WIDTH // 2 - text_surface.get_width() // 2
+            y = self.HEIGHT // 2 - len(self.menu_options) * text_surface.get_height() // 2 + idx * text_surface.get_height() * 1.5
             self.screen.blit(text_surface, (x, y))
 
-            # Highlight selected option
             if idx == self.selected_option:
                 pygame.draw.rect(self.screen, self.WHITE, (x - 10, y - 10, text_surface.get_width() + 20, text_surface.get_height() + 20), 3)
 
@@ -281,7 +291,7 @@ class Uranus:
                                     return "main_menu"
                 elif event.type == pygame.MOUSEBUTTONDOWN and self.game_state == "playing" and not self.paused and self.arrow is None:
                     x, y = event.pos
-                    self.arrow = self.Arrow(self.bow_x, self.bow_y, x, y, self.RED)
+                    self.arrow = self.Arrow(self.bow_x, self.bow_y, x, y, self.RED, self)
 
             if self.game_state == "intro":
                 self.text_box.update()
@@ -326,11 +336,12 @@ class Uranus:
                         angle = math.atan2(mouse_y - self.bow_y, mouse_x - self.bow_x)
                         end_x = self.bow_x + self.bow_length * math.cos(angle)
                         end_y = self.bow_y + self.bow_length * math.sin(angle)
-                        pygame.draw.line(self.screen, self.RED, (self.bow_x, self.bow_y), (end_x, end_y), 5)
+                        pygame.draw.line(self.screen, self.RED, (self.bow_x, self.bow_y), (end_x, end_y),
+                                         int(self.WIDTH * 0.005))
 
                     # Draw score
                     score_text = self.small_font.render(f"Score: {self.player_score}/5", True, self.WHITE)
-                    self.screen.blit(score_text, (20, 20))
+                    self.screen.blit(score_text, (int(self.WIDTH * 0.02), int(self.HEIGHT * 0.02)))
                 else:
                     self.draw_pause_menu()
             elif self.game_state == "victory" or self.game_state == "defeat":

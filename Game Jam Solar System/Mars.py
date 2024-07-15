@@ -11,8 +11,8 @@ class TextBox:
         self.rendered_text = []
         self.text_content = []
         self.reveal_index = 0
-        self.line_spacing = 5
-        self.font = pygame.font.Font(None, 32)
+        self.line_spacing = 10
+        self.font = pygame.font.Font(None, 48)
 
     def set_text(self, text):
         self.text = text
@@ -62,8 +62,9 @@ class Mars:
         pygame.init()
 
         # Screen dimensions
-        self.screen_width = 1200
-        self.screen_height = 800
+        screen_info = pygame.display.Info()
+        self.screen_width = screen_info.current_w
+        self.screen_height = screen_info.current_h
 
         # Colors
         self.white = (255, 255, 255)
@@ -77,24 +78,29 @@ class Mars:
 
         # Load images
         self.player_img = pygame.image.load('src/ufo.png')
+        self.player_img = pygame.transform.scale(self.player_img,
+                                                 (int(self.screen_width * 0.05), int(self.screen_height * 0.075)))
         self.rock_img = pygame.image.load('src/rock.png')
+        self.rock_img = pygame.transform.scale(self.rock_img,
+                                               (int(self.screen_width * 0.05), int(self.screen_height * 0.05)))
         self.background = pygame.image.load('src/mars.jpg')
+        self.background = pygame.transform.scale(self.background, (self.screen_width, self.screen_height))
 
         # Player settings
-        self.player_width = 50
-        self.player_height = 60
+        self.player_width = int(self.screen_width * 0.05)
+        self.player_height = int(self.screen_height * 0.075)
         self.player_x = self.screen_width // 2
         self.player_y = self.screen_height - self.player_height
-        self.player_speed = 5
+        self.player_speed = int(self.screen_width * 0.005)
         self.player_jump = False
-        self.jump_speed = 10
-        self.gravity = 1
+        self.jump_speed = int(self.screen_height * 0.015)
+        self.gravity = int(self.screen_height * 0.001)
 
         # Rock settings
-        self.rock_width = 50
-        self.rock_height = 50
-        self.rock_speed = 5  # Adjust rock falling speed here
-        self.rock_interval = 2.0  # time in seconds between rocks
+        self.rock_width = int(self.screen_width * 0.05)
+        self.rock_height = int(self.screen_height * 0.05)
+        self.rock_speed = int(self.screen_height * 0.005)
+        self.rock_interval = 2.0
         self.last_rock_time = time.time()
 
         # Game variables
@@ -106,8 +112,8 @@ class Mars:
         self.target_score = 22000
 
         # Fonts
-        self.font = pygame.font.Font(None, 74)
-        self.small_font = pygame.font.Font(None, 36)
+        self.font = pygame.font.Font(None, int(self.screen_height * 0.1))
+        self.small_font = pygame.font.Font(None, int(self.screen_height * 0.05))
 
         # Rocks list
         self.rocks = []
@@ -118,9 +124,10 @@ class Mars:
         # Initialize Pygame mixer
         pygame.mixer.init()
         pygame.mixer.music.load('src/marsbgm.mp3')
-        pygame.mixer.music.play(-1)  # Play music indefinitely
+        pygame.mixer.music.play(-1)
 
-        self.text_box = TextBox(50, 600, 1100, 150)
+        self.text_box = TextBox(int(self.screen_width * 0.05), int(self.screen_height * 0.75),
+                                int(self.screen_width * 0.9), int(self.screen_height * 0.2))
         self.game_state = "intro"
         self.intro_text = "Welcome to Mars! John, your mission is to climb the volcano while avoiding falling rocks. Reach a height of 22,000m to win!"
         self.victory_text = "Congratulations! You've successfully climbed the Martian volcano! Obtained the Cancer gem"

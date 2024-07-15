@@ -4,22 +4,22 @@ import sys
 import textwrap
 from pygame import mixer
 
-
 class TextBox:
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
+    def __init__(self, x, y, width, height, screen_width, screen_height):
+        self.rect = pygame.Rect(int(x * screen_width), int(y * screen_height),
+                                int(width * screen_width), int(height * screen_height))
         self.text = ""
         self.rendered_text = []
         self.text_content = []
         self.reveal_index = 0
-        self.line_spacing = 5
-        self.font = pygame.font.Font(None, 32)
+        self.line_spacing = int(0.00625 * screen_height)
+        self.font = pygame.font.Font(None, int(0.04 * screen_height))
 
     def set_text(self, text):
         self.text = text
         self.rendered_text = []
         self.text_content = []
-        wrapped_text = self.wrap_text(text, self.rect.width - 20)
+        wrapped_text = self.wrap_text(text, self.rect.width - int(0.0167 * self.rect.width))
         for line in wrapped_text:
             self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
             self.text_content.append(line)
@@ -46,9 +46,9 @@ class TextBox:
         pygame.draw.rect(surface, (0, 0, 0), self.rect)
         pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
 
-        y = self.rect.top + 10
+        y = self.rect.top + int(0.0125 * self.rect.height)
         for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
-            x = self.rect.left + 10
+            x = self.rect.left + int(0.0125 * self.rect.width)
             if i * len(content) < self.reveal_index:
                 surface.blit(line, (x, y))
                 y += line.get_height() + self.line_spacing
@@ -56,14 +56,13 @@ class TextBox:
     def is_finished(self):
         return self.reveal_index >= sum(len(line) for line in self.text_content)
 
-
 class Saturn:
     def __init__(self):
         pygame.init()
 
         # Screen setup
-        self.WIDTH = 1200
-        self.HEIGHT = 800
+        info = pygame.display.Info()
+        self.WIDTH, self.HEIGHT = info.current_w, info.current_h
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Alien Jigsaw Puzzle")
         self.background = pygame.image.load("src/saturnbackground.jpg")
@@ -81,7 +80,7 @@ class Saturn:
         self.alien_image = pygame.image.load('src/saturn.png')
 
         # Resize image
-        self.sign_size = 300
+        self.sign_size = int(0.375 * self.HEIGHT)
         self.alien_image = pygame.transform.scale(self.alien_image, (self.sign_size, self.sign_size))
 
         # Split image into pieces
@@ -102,21 +101,21 @@ class Saturn:
 
         # Centering variables
         self.center_x = (self.WIDTH - self.pieces_per_row * self.piece_size) // 2
-        self.center_y = (self.HEIGHT - self.pieces_per_row * self.piece_size) // 2 + 50  # Adjusted for space
+        self.center_y = (self.HEIGHT - self.pieces_per_row * self.piece_size) // 2 + int(0.0625 * self.HEIGHT)
 
         # Pause menu variables
         self.pause_menu_active = False
         self.selected_option = 0  # 0: Resume, 1: Retry, 2: Quit
-        self.pause_menu_font = pygame.font.Font(None, 36)
+        self.pause_menu_font = pygame.font.Font(None, int(0.045 * self.HEIGHT))
 
         # Congratulations screen variables
         self.congratulations_active = False
-        self.congratulations_font = pygame.font.Font(None, 48)
-        self.options_font = pygame.font.Font(None, 36)
+        self.congratulations_font = pygame.font.Font(None, int(0.06 * self.HEIGHT))
+        self.options_font = pygame.font.Font(None, int(0.045 * self.HEIGHT))
         self.congratulations_options = ["Retry", "Quit"]
         self.congratulations_selected = 0
 
-        self.text_box = TextBox(50, 600, 1100, 150)
+        self.text_box = TextBox(0.0417, 0.75, 0.9167, 0.1875, self.WIDTH, self.HEIGHT)
         self.game_state = "intro"
         self.intro_text = "Welcome to Saturn! John, there's a puzzle! The puzzle should look like the image on top!"
         self.victory_text = "Congratulations! You've successfully completed the Saturn stage! Obtained the Scorpio and the Capricorn gem"
@@ -131,9 +130,9 @@ class Saturn:
             pygame.draw.rect(self.screen, self.BLACK, (x, y, self.piece_size, self.piece_size), 1)
 
     def draw_reference_image(self):
-        small_sign_size = 100
+        small_sign_size = int(0.125 * self.HEIGHT)
         self.screen.blit(pygame.transform.scale(self.alien_image, (small_sign_size, small_sign_size)),
-                         (self.WIDTH // 2 - small_sign_size // 2, 10))
+                         (self.WIDTH // 2 - small_sign_size // 2, int(0.0125 * self.HEIGHT)))
 
     def check_correct_placement(self):
         return self.grid == list(range(self.total_pieces))
@@ -149,15 +148,15 @@ class Saturn:
         quit_text = self.pause_menu_font.render("Quit", True, self.WHITE if self.selected_option != 2 else self.BLACK)
 
         menu_height = resume_text.get_height() * 3
-        menu_width = max(resume_text.get_width(), retry_text.get_width(), quit_text.get_width()) + 40
+        menu_width = max(resume_text.get_width(), retry_text.get_width(), quit_text.get_width()) + int(0.0333 * self.WIDTH)
 
         menu_x = (self.WIDTH - menu_width) // 2
         menu_y = (self.HEIGHT - menu_height) // 2
 
         pygame.draw.rect(self.screen, self.WHITE, (menu_x, menu_y, menu_width, menu_height), 2)
-        self.screen.blit(resume_text, (menu_x + 20, menu_y + 20))
-        self.screen.blit(retry_text, (menu_x + 20, menu_y + 20 + resume_text.get_height()))
-        self.screen.blit(quit_text, (menu_x + 20, menu_y + 20 + resume_text.get_height() * 2))
+        self.screen.blit(resume_text, (menu_x + int(0.0167 * self.WIDTH), menu_y + int(0.025 * self.HEIGHT)))
+        self.screen.blit(retry_text, (menu_x + int(0.0167 * self.WIDTH), menu_y + int(0.025 * self.HEIGHT) + resume_text.get_height()))
+        self.screen.blit(quit_text, (menu_x + int(0.0167 * self.WIDTH), menu_y + int(0.025 * self.HEIGHT) + resume_text.get_height() * 2))
 
     def draw_congratulations(self):
         self.screen.blit(self.background, (0, 0))  # Draw the background image
@@ -166,18 +165,18 @@ class Saturn:
 
         congratulations_text = self.congratulations_font.render("Congratulations! The puzzle is solved.", True,
                                                                 self.WHITE)
-        text_rect = congratulations_text.get_rect(center=(self.WIDTH // 2, self.HEIGHT // 2 - 100))
+        text_rect = congratulations_text.get_rect(center=(self.WIDTH // 2, self.HEIGHT // 2 - int(0.125 * self.HEIGHT)))
         self.screen.blit(congratulations_text, text_rect)
 
         for i, option in enumerate(self.congratulations_options):
             color = self.BLACK if self.congratulations_selected == i else self.WHITE
             option_text = self.options_font.render(option, True, color)
             text_x = self.WIDTH // 2 - option_text.get_width() // 2
-            text_y = self.HEIGHT // 2 + 50 + i * (option_text.get_height() + 20)
+            text_y = self.HEIGHT // 2 + int(0.0625 * self.HEIGHT) + i * (option_text.get_height() + int(0.025 * self.HEIGHT))
 
             if self.congratulations_selected == i:
                 rect = option_text.get_rect(center=(self.WIDTH // 2, text_y + option_text.get_height() // 2))
-                pygame.draw.rect(self.screen, self.WHITE, rect.inflate(20, 10))
+                pygame.draw.rect(self.screen, self.WHITE, rect.inflate(int(0.0167 * self.WIDTH), int(0.0125 * self.HEIGHT)))
 
             self.screen.blit(option_text, (text_x, text_y))
 

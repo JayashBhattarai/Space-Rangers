@@ -1,16 +1,17 @@
 import pygame
 from pygame import mixer
+import ctypes
 
 
 class TextBox:
-    def __init__(self, x, y, width, height):
+    def __init__(self, x, y, width, height, font_size):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = ""
         self.rendered_text = []
         self.text_content = []
         self.reveal_index = 0
         self.line_spacing = 5
-        self.font = pygame.font.Font(None, 32)
+        self.font = pygame.font.Font(None, font_size)
 
     def set_text(self, text):
         self.text = text
@@ -58,8 +59,10 @@ class Epilogue:
     def __init__(self):
         pygame.init()
 
-        self.WIDTH = 1200
-        self.HEIGHT = 800
+        # Get the screen size
+        user32 = ctypes.windll.user32
+        self.WIDTH = user32.GetSystemMetrics(0)
+        self.HEIGHT = user32.GetSystemMetrics(1)
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Epilogue")
 
@@ -67,7 +70,13 @@ class Epilogue:
         self.BLACK = (0, 0, 0)
         self.GRAY = (169, 169, 169)
 
-        self.text_box = TextBox(50, 600, 1100, 150)
+        text_box_width = int(self.WIDTH * 0.9)
+        text_box_height = int(self.HEIGHT * 0.2)
+        text_box_x = (self.WIDTH - text_box_width) // 2
+        text_box_y = int(self.HEIGHT * 0.75)
+        font_size = int(self.HEIGHT * 0.045)  # Adjust font size based on screen height
+
+        self.text_box = TextBox(text_box_x, text_box_y, text_box_width, text_box_height, font_size)
 
         # Load background image
         self.background = pygame.image.load("src/epilogue.png")
@@ -114,15 +123,15 @@ class Epilogue:
         self.selected_end_option = 0
 
     def draw_end_options(self):
-        # Draw the end options menu
-        mixer.music.stop()
-        self.screen.fill((0, 0, 0))
+        self.screen.fill(self.BLACK)
         menu_x = self.WIDTH // 2
         menu_y = self.HEIGHT // 2
+        font_size = int(self.HEIGHT * 0.04)  # Adjust font size for end options
+        font = pygame.font.Font(None, font_size)
         for i, option in enumerate(self.end_options):
-            color = self.WHITE if i == self.selected_end_option else self.WHITE
-            rendered_option = self.text_box.font.render(option, True, color)
-            option_rect = rendered_option.get_rect(center=(menu_x, menu_y + i * 40))
+            color = self.WHITE
+            rendered_option = font.render(option, True, color)
+            option_rect = rendered_option.get_rect(center=(menu_x, menu_y + i * (font_size + 10)))
             self.screen.blit(rendered_option, option_rect)
 
     def run(self):

@@ -67,7 +67,8 @@ class Neptune:
         pygame.init()
 
         # Screen dimensions
-        self.WIDTH, self.HEIGHT = 1200, 800
+        info = pygame.display.Info()
+        self.WIDTH, self.HEIGHT = info.current_w, info.current_h
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Underwater Adventure")
 
@@ -85,26 +86,26 @@ class Neptune:
         mixer.music.load('src/neptunebgm.mp3')
 
         # Player settings
-        self.player_width, self.player_height = 50, 30
+        self.player_width, self.player_height = int(self.WIDTH * 0.08), int(self.HEIGHT * 0.075)
         self.player_x, self.player_y = self.WIDTH // 2 - self.player_width // 2, self.HEIGHT // 2 - self.player_height // 2
-        self.player_speed = 2  # Default speed for up, down, right
-        self.player_speed_left = 4  # Faster speed for left
+        self.player_speed = int(self.WIDTH * 0.002)  # Default speed for up, down, right
+        self.player_speed_left = int(self.WIDTH * 0.004)  # Faster speed for left
 
         # Coin settings
-        self.coin_width, self.coin_height = 30, 30
+        self.coin_width, self.coin_height = int(self.WIDTH * 0.025), int(self.HEIGHT * 0.0375)
 
         # Obstacle settings
-        self.obstacle_width, self.obstacle_height = 50, 50
+        self.obstacle_width, self.obstacle_height = int(self.WIDTH * 0.04), int(self.HEIGHT * 0.0625)
 
         # Fish settings
-        self.fish_width, self.fish_height = 50, 30
+        self.fish_width, self.fish_height = int(self.WIDTH * 0.04), int(self.HEIGHT * 0.0375)
 
         # Distance settings
         self.finish_line_distance = 500  # meters
 
         # Font
-        self.font = pygame.font.Font(None, 36)
-        self.menu_font = pygame.font.Font(None, 48)
+        self.font = pygame.font.Font(None, int(self.HEIGHT * 0.045))
+        self.menu_font = pygame.font.Font(None, int(self.HEIGHT * 0.06))
 
         # Initialize game variables
         self.clock = pygame.time.Clock()
@@ -126,7 +127,6 @@ class Neptune:
 
         # Load images
         self.player_img = pygame.image.load("src/submarine.png")
-        self.player_width, self.player_height = 100, 60  # Adjust dimensions as needed
         self.player_img = pygame.transform.scale(self.player_img, (self.player_width, self.player_height))
 
         self.fish_img = pygame.image.load("src/fish.png")
@@ -136,7 +136,8 @@ class Neptune:
         self.obstacle_img = pygame.transform.scale(self.obstacle_img, (self.obstacle_width, self.obstacle_height))
 
         # Text box and game state
-        self.text_box = TextBox(50, 600, 1100, 150)
+        self.text_box = TextBox(int(self.WIDTH * 0.04), int(self.HEIGHT * 0.75), int(self.WIDTH * 0.92),
+                                int(self.HEIGHT * 0.1875))
         self.game_state = "intro"
         self.intro_text = "Welcome to Neptune! John, your mission is to travel underwater! Don't forget to collect the coins!"
         self.victory_text = "Congratulations! You've successfully reached the destination! Obtained the Aquarius and the Pisces gem"
@@ -166,15 +167,27 @@ class Neptune:
     def draw_fish(self, fish_rect):
         self.screen.blit(self.fish_img, fish_rect.topleft)
 
-    def draw_text(self, text, size, x, y, color):
-        text_surface = self.font.render(text, True, color)
-        self.screen.blit(text_surface, (x, y))
+    def draw_text(self, text, size, x, y, color, center=False):
+        font = pygame.font.Font(None, size)
+        text_surface = font.render(text, True, color)
+        if center:
+            text_rect = text_surface.get_rect(center=(x, y))
+        else:
+            text_rect = text_surface.get_rect(topleft=(x, y))
+        self.screen.blit(text_surface, text_rect)
+
 
     def game_over_screen(self):
         mixer.music.stop()  # Stop BGM
         self.screen.fill(self.SKY)
-        self.draw_text("Game Over", 74, self.WIDTH // 2 - 100, self.HEIGHT // 2 - 50, self.WHITE)
-        self.draw_text("Press R to restart or Q to quit", 36, self.WIDTH // 2 - 150, self.HEIGHT // 2 + 50, self.WHITE)
+
+        title_size = int(self.HEIGHT * 0.0925)  # 74 / 800 ≈ 0.0925
+        subtitle_size = int(self.HEIGHT * 0.045)  # 36 / 800 = 0.045
+
+        self.draw_text("Game Over", title_size, self.WIDTH // 2, self.HEIGHT * 0.4, self.WHITE, center=True)
+        self.draw_text("Press R to restart or Q to quit", subtitle_size, self.WIDTH // 2, self.HEIGHT * 0.6, self.WHITE,
+                       center=True)
+
         pygame.display.flip()
 
     def game_won_screen(self):
@@ -183,9 +196,13 @@ class Neptune:
         overlay.fill((0, 0, 0, 180))  # Translucent black
         self.screen.blit(overlay, (0, 0))
 
+        title_size = int(self.HEIGHT * 0.0925)  # 74 / 800 ≈ 0.0925
+        subtitle_size = int(self.HEIGHT * 0.045)  # 36 / 800 = 0.045
+
         # Draw game won message
-        self.draw_text("Congratulations!", 74, self.WIDTH // 2 - 150, self.HEIGHT // 2 - 50, self.WHITE)
-        self.draw_text("Press R to restart or Q to quit", 36, self.WIDTH // 2 - 150, self.HEIGHT // 2 + 50, self.WHITE)
+        self.draw_text("Congratulations!", title_size, self.WIDTH // 2, self.HEIGHT * 0.4, self.WHITE, center=True)
+        self.draw_text("Press R to restart or Q to quit", subtitle_size, self.WIDTH // 2, self.HEIGHT * 0.6, self.WHITE,
+                       center=True)
 
         pygame.display.flip()
 
@@ -235,7 +252,8 @@ class Neptune:
         # Draw menu options
         for idx, option in enumerate(self.menu_options):
             text_surface = self.menu_font.render(option, True, self.WHITE)
-            x, y = self.WIDTH // 2 - text_surface.get_width() // 2, self.HEIGHT // 2 - 50 + idx * 50
+            x = self.WIDTH // 2 - text_surface.get_width() // 2
+            y = self.HEIGHT // 2 - int(self.HEIGHT * 0.0625) + idx * int(self.HEIGHT * 0.0625)
             self.screen.blit(text_surface, (x, y))
 
             # Highlight selected option
@@ -391,8 +409,10 @@ class Neptune:
                         self.draw_fish(fish)
 
                     self.draw_player()
-                    self.draw_text(f"Coins: {self.coins_collected}/10", 24, 10, 10, self.WHITE)
-                    self.draw_text(f"Distance: {int(self.distance_travelled)} m", 24, 10, 40, self.WHITE)
+                    self.draw_text(f"Coins: {self.coins_collected}/10", int(self.HEIGHT * 0.03), self.WIDTH * 0.01,
+                                   self.HEIGHT * 0.0125, self.WHITE)
+                    self.draw_text(f"Distance: {int(self.distance_travelled)} m", int(self.HEIGHT * 0.03),
+                                   self.WIDTH * 0.01, self.HEIGHT * 0.05, self.WHITE)
 
                     if self.game_over:
                         self.game_state = "defeat"
