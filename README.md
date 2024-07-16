@@ -14,5 +14,10 @@ The 'start game' navigates you to level selection screen where there are total o
   Stage Mercury: Choose the right path<br>
   Stage Sun: Defeat the alien boss<br>
 Each stages has sound effects and background music<br>
+Press esc for pause menu <br>
 <br>
-The 'space navigation' lets the players to fly a rocket starting from Earth to different parts of the solar system. The solar system has the Sun and eight planets with visible orbits for the planets.
+The 'space navigation' lets the players to fly a rocket starting from Earth to different parts of the solar system. The solar system has the Sun and eight planets with visible orbits for the planets.<br>
+<br>
+I do not own any of the images or sounds (musics) used.<br>
+image references: freepik and flaticons, AI generated images from Canva <br>
+bgm references: Pokemon Rangers Batonnage (Main menu, Mars), Liar Game (Venus), Death Note (Jupiter), Pokemon Platinum (Uranus), Mario underwater theme (Neptune), Donkey Kong (Mercury), Dragon Ball (Prologue), Fairy Tail (Epilogue) <br>
