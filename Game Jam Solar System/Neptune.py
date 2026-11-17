@@ -1,64 +1,15 @@
+from ui_controls import draw_options
+from input_controls import get_events, pressed_keys
+from campaign import complete_level
+from dialogue import DialogueBox
+from display_settings import game_size
 import pygame
 import random
 import textwrap
 from pygame import mixer
 
 
-class TextBox:
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.text = ""
-        self.rendered_text = []
-        self.text_content = []
-        self.reveal_index = 0
-        self.line_spacing = 5
-        self.font = pygame.font.Font(None, 32)
-        self.reveal_speed = 2
-
-    def set_text(self, text):
-        self.text = text
-        self.rendered_text = []
-        self.text_content = []
-        wrapped_text = self.wrap_text(text, self.rect.width - 20)
-        for line in wrapped_text:
-            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
-            self.text_content.append(line)
-        self.reveal_index = 0
-
-    def wrap_text(self, text, max_width):
-        words = text.split(' ')
-        wrapped_lines = []
-        current_line = ""
-        for word in words:
-            test_line = current_line + word + " "
-            if self.font.size(test_line)[0] <= max_width:
-                current_line = test_line
-            else:
-                wrapped_lines.append(current_line.strip())
-                current_line = word + " "
-        wrapped_lines.append(current_line.strip())
-        return wrapped_lines
-
-    def update(self):
-        self.reveal_index += self.reveal_speed
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, (0, 0, 0), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
-
-        y = self.rect.top + 10
-        total_chars = 0
-        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
-            x = self.rect.left + 10
-            if total_chars < self.reveal_index:
-                chars_to_render = min(len(content), self.reveal_index - total_chars)
-                rendered_line = self.font.render(content[:chars_to_render], True, (255, 255, 255))
-                surface.blit(rendered_line, (x, y))
-            y += line.get_height() + self.line_spacing
-            total_chars += len(content)
-
-    def is_finished(self):
-        return self.reveal_index >= sum(len(line) for line in self.text_content)
+TextBox = DialogueBox
 
 
 class Neptune:
@@ -67,8 +18,7 @@ class Neptune:
         pygame.init()
 
         # Screen dimensions
-        info = pygame.display.Info()
-        self.WIDTH, self.HEIGHT = info.current_w, info.current_h
+        self.WIDTH, self.HEIGHT = game_size()
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Underwater Adventure")
 
@@ -181,13 +131,14 @@ class Neptune:
         mixer.music.stop()  # Stop BGM
         self.screen.fill(self.SKY)
 
-        title_size = int(self.HEIGHT * 0.0925)  # 74 / 800 ≈ 0.0925
+        title_size = int(self.HEIGHT * 0.0925)  # 74 / 800 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â  0.0925
         subtitle_size = int(self.HEIGHT * 0.045)  # 36 / 800 = 0.045
 
         self.draw_text("Game Over", title_size, self.WIDTH // 2, self.HEIGHT * 0.4, self.WHITE, center=True)
         self.draw_text("Press R to restart or Q to quit", subtitle_size, self.WIDTH // 2, self.HEIGHT * 0.6, self.WHITE,
                        center=True)
 
+        draw_options(self)
         pygame.display.flip()
 
     def game_won_screen(self):
@@ -196,7 +147,7 @@ class Neptune:
         overlay.fill((0, 0, 0, 180))  # Translucent black
         self.screen.blit(overlay, (0, 0))
 
-        title_size = int(self.HEIGHT * 0.0925)  # 74 / 800 ≈ 0.0925
+        title_size = int(self.HEIGHT * 0.0925)  # 74 / 800 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â  0.0925
         subtitle_size = int(self.HEIGHT * 0.045)  # 36 / 800 = 0.045
 
         # Draw game won message
@@ -204,6 +155,7 @@ class Neptune:
         self.draw_text("Press R to restart or Q to quit", subtitle_size, self.WIDTH // 2, self.HEIGHT * 0.6, self.WHITE,
                        center=True)
 
+        draw_options(self)
         pygame.display.flip()
 
     def handle_game_over(self, is_victory):
@@ -227,9 +179,10 @@ class Neptune:
                 self.draw_text("Press R to restart or Q to quit", 36, self.WIDTH // 2 - 150, self.HEIGHT - 400,
                                self.WHITE)
 
+            draw_options(self)
             pygame.display.flip()
 
-            for event in pygame.event.get():
+            for event in get_events(self):
                 if event.type == pygame.QUIT:
                     return "quit"
                 if event.type == pygame.KEYDOWN:
@@ -268,7 +221,7 @@ class Neptune:
 
     def check_collisions(self):
         # Check collision with coins
-        for coin in self.coins:
+        for coin in self.coins[:]:
             if self.player_rect.colliderect(coin):
                 self.coins.remove(coin)
                 self.coins_collected += 1
@@ -295,7 +248,7 @@ class Neptune:
         while running:
             self.screen.fill(self.SKY)
 
-            for event in pygame.event.get():
+            for event in get_events(self):
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
@@ -303,18 +256,14 @@ class Neptune:
                         self.game_state = "playing"
                     elif self.game_state == "playing":
                         if event.key == pygame.K_ESCAPE:
-                            if self.paused:
-                                if self.selected_option == 0:  # Resume
-                                    self.paused = False
-                                elif self.selected_option == 1:  # Restart
-                                    self.reset_game()
-                                    mixer.music.play(-1)  # Restart BGM
-                                elif self.selected_option == 2:  # Quit
-                                    pygame.mixer.music.stop()
-                                    return "main_menu"  # Return to main menu
-                            else:
-                                self.paused = not self.paused
+                            self.paused = not self.paused
+                            self.selected_option = 0
                         elif self.paused:
+                            if event.key == pygame.K_q:
+                                pygame.mixer.music.stop()
+                                return "main_menu"
+                            elif event.key == pygame.K_r:
+                                self.reset_game()
                             if event.key == pygame.K_DOWN:
                                 self.selected_option = (self.selected_option + 1) % len(self.menu_options)
                             elif event.key == pygame.K_UP:
@@ -336,7 +285,7 @@ class Neptune:
                             text_surface = self.menu_font.render(option, True, self.WHITE)
                             text_width, text_height = text_surface.get_size()
                             option_x = self.WIDTH // 2 - text_width // 2
-                            option_y = self.HEIGHT // 2 - 50 + idx * 50
+                            option_y = self.HEIGHT // 2 - int(self.HEIGHT * 0.0625) + idx * int(self.HEIGHT * 0.0625)
                             if option_x <= mouse_x <= option_x + text_width and option_y <= mouse_y <= option_y + text_height:
                                 if idx == 0:  # Resume
                                     self.paused = False
@@ -354,7 +303,7 @@ class Neptune:
                     # self.draw_text("Press any key to start", 24, self.WIDTH // 2 - 100, self.HEIGHT - 50, self.WHITE)
             elif self.game_state == "playing":
                 if not self.paused:
-                    keys = pygame.key.get_pressed()
+                    keys = pressed_keys()
                     if keys[pygame.K_UP] and self.player_rect.top > 0:
                         self.player_rect.y -= self.player_speed
                     if keys[pygame.K_DOWN] and self.player_rect.bottom < self.HEIGHT:
@@ -372,6 +321,7 @@ class Neptune:
                         self.game_won = True
 
                     self.player_rect.y += 1  # Simulate sinking
+                    self.player_rect.clamp_ip(self.screen.get_rect())
 
                     for coin in self.coins:
                         coin.x -= self.player_speed
@@ -419,6 +369,7 @@ class Neptune:
                         self.text_box.set_text(self.defeat_text)
                     elif self.game_won:
                         self.game_state = "victory"
+                        complete_level('neptune')
                         self.text_box.set_text(self.victory_text)
 
                 if self.paused:
@@ -433,6 +384,7 @@ class Neptune:
                 elif result == "quit":
                     running = False
 
+            draw_options(self)
             pygame.display.flip()
             self.clock.tick(60)
 

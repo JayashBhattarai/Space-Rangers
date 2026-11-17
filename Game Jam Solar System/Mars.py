@@ -1,59 +1,15 @@
+from ui_controls import draw_options
+from input_controls import get_events, pressed_keys
+from campaign import complete_level
+from dialogue import DialogueBox
+from display_settings import game_size
 import pygame
 import random
 import time
 import textwrap
 
 
-class TextBox:
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.text = ""
-        self.rendered_text = []
-        self.text_content = []
-        self.reveal_index = 0
-        self.line_spacing = 10
-        self.font = pygame.font.Font(None, 48)
-
-    def set_text(self, text):
-        self.text = text
-        self.rendered_text = []
-        self.text_content = []
-        wrapped_text = self.wrap_text(text, self.rect.width - 20)
-        for line in wrapped_text:
-            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
-            self.text_content.append(line)
-        self.reveal_index = 0
-
-    def wrap_text(self, text, max_width):
-        words = text.split(' ')
-        wrapped_lines = []
-        current_line = ""
-        for word in words:
-            test_line = current_line + word + " "
-            if self.font.size(test_line)[0] <= max_width:
-                current_line = test_line
-            else:
-                wrapped_lines.append(current_line.strip())
-                current_line = word + " "
-        wrapped_lines.append(current_line.strip())
-        return wrapped_lines
-
-    def update(self):
-        self.reveal_index += 1
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, (0, 0, 0), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
-
-        y = self.rect.top + 10
-        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
-            x = self.rect.left + 10
-            if i * len(content) < self.reveal_index:
-                surface.blit(line, (x, y))
-                y += line.get_height() + self.line_spacing
-
-    def is_finished(self):
-        return self.reveal_index >= sum(len(line) for line in self.text_content)
+TextBox = DialogueBox
 
 
 class Mars:
@@ -62,9 +18,7 @@ class Mars:
         pygame.init()
 
         # Screen dimensions
-        screen_info = pygame.display.Info()
-        self.screen_width = screen_info.current_w
-        self.screen_height = screen_info.current_h
+        self.screen_width, self.screen_height = game_size()
 
         # Colors
         self.white = (255, 255, 255)
@@ -94,7 +48,7 @@ class Mars:
         self.player_speed = int(self.screen_width * 0.005)
         self.player_jump = False
         self.jump_speed = int(self.screen_height * 0.015)
-        self.gravity = int(self.screen_height * 0.001)
+        self.gravity = max(1, int(self.screen_height * 0.001))
 
         # Rock settings
         self.rock_width = int(self.screen_width * 0.05)
@@ -139,6 +93,8 @@ class Mars:
         self.screen.blit(text_surface, (x, y))
 
     def reset_game(self):
+        self.player_jump = False
+        self.last_rock_time = time.time()
         self.player_x = self.screen_width // 2
         self.player_y = self.screen_height - self.player_height
         self.player_y_velocity = 0
@@ -170,7 +126,7 @@ class Mars:
             self.screen.fill(self.black)
             self.screen.blit(self.background, (0, 0))
 
-            for event in pygame.event.get():
+            for event in get_events(self):
                 if event.type == pygame.QUIT:
                     self.running = False
                 elif event.type == pygame.KEYDOWN:
@@ -200,7 +156,7 @@ class Mars:
                     self.text_box.draw(self.screen)
                 elif self.game_state == "playing":
                     if not self.game_over and not self.level_complete:
-                        keys = pygame.key.get_pressed()
+                        keys = pressed_keys()
                         if keys[pygame.K_LEFT] and self.player_x > 0:
                             self.player_x -= self.player_speed
                         if keys[pygame.K_RIGHT] and self.player_x < self.screen_width - self.player_width:
@@ -246,6 +202,8 @@ class Mars:
                             else:
                                 self.screen.blit(self.rock_img, (rock[0], rock[1]))
 
+                    if self.game_state == "victory":
+                        complete_level("mars")
                     self.screen.blit(self.player_img, (self.player_x, self.player_y))
 
                 elif self.game_state in ["victory", "defeat"]:
@@ -275,7 +233,7 @@ class Mars:
                     self.text_box.update()
                     self.text_box.draw(self.screen)
 
-                    keys = pygame.key.get_pressed()
+                    keys = pressed_keys()
                     if keys[pygame.K_r]:
                         self.reset_game()
                     elif keys[pygame.K_q]:
@@ -287,6 +245,7 @@ class Mars:
             else:
                 self.pause_menu()
 
+            draw_options(self)
             pygame.display.update()
             clock.tick(60)
 

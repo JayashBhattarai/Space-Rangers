@@ -1,58 +1,15 @@
+from ui_controls import draw_options
+from input_controls import get_events, pressed_keys
+from campaign import complete_level
+from dialogue import DialogueBox
+from display_settings import game_size
 import pygame
 import random
 import textwrap
 
-class TextBox:
+class TextBox(DialogueBox):
     def __init__(self, x, y, width, height, screen_width, screen_height):
-        self.rect = pygame.Rect(int(x * screen_width), int(y * screen_height),
-                                int(width * screen_width), int(height * screen_height))
-        self.text = ""
-        self.rendered_text = []
-        self.text_content = []
-        self.reveal_index = 0
-        self.line_spacing = 5
-        self.font = pygame.font.Font(None, int(screen_height * 0.04))
-
-    def set_text(self, text):
-        self.text = text
-        self.rendered_text = []
-        self.text_content = []
-        wrapped_text = self.wrap_text(text, self.rect.width - 20)
-        for line in wrapped_text:
-            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
-            self.text_content.append(line)
-        self.reveal_index = 0
-
-    def wrap_text(self, text, max_width):
-        words = text.split(' ')
-        wrapped_lines = []
-        current_line = ""
-        for word in words:
-            test_line = current_line + word + " "
-            if self.font.size(test_line)[0] <= max_width:
-                current_line = test_line
-            else:
-                wrapped_lines.append(current_line.strip())
-                current_line = word + " "
-        wrapped_lines.append(current_line.strip())
-        return wrapped_lines
-
-    def update(self):
-        self.reveal_index += 1
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, (0, 0, 0), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
-
-        y = self.rect.top + 10
-        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
-            x = self.rect.left + 10
-            if i * len(content) < self.reveal_index:
-                surface.blit(line, (x, y))
-                y += line.get_height() + self.line_spacing
-
-    def is_finished(self):
-        return self.reveal_index >= sum(len(line) for line in self.text_content)
+        super().__init__(int(x * screen_width), int(y * screen_height), int(width * screen_width), int(height * screen_height), int(screen_height * 0.04))
 
 
 class Venus:
@@ -61,8 +18,7 @@ class Venus:
         pygame.init()
 
         # Screen setup
-        info = pygame.display.Info()
-        self.WIDTH, self.HEIGHT = info.current_w, info.current_h
+        self.WIDTH, self.HEIGHT = game_size()
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Zodiac Memory Card Game")
 
@@ -114,7 +70,10 @@ class Venus:
         self.text_box = TextBox(0.04, 0.75, 0.92, 0.19, self.WIDTH, self.HEIGHT)
         self.game_state = "intro"
         self.intro_text = "Welcome to Venus! John, your mission is to match the cards with same zodiac name"
-        self.victory_text = "Congratulations! You've successfully matched all the cards! Obtained the Gemini and the Virgo gem. John! It seems like we can not go to Mercury because of the heat barrier. We need to find Aquarius and Pisces to go through it!"
+        self.victory_text = [
+            "Gemini and Virgo acquired! Aries supplies power, Cancer shields the ship, Gemini combines twin energy streams, and Virgo focuses them. With Earth, Mars and Venus complete, the Resonance Beam can cut a path through the alien-fortified asteroid belt! Right-click to aim it, or press F to fire ahead.",
+            "Beyond the belt lies Jupiter. Mercury is still protected by a heat barrier; find Aquarius and Pisces on Neptune to pass through it."
+        ]
 
     def create_cards(self):
         card_values = self.ZODIAC_SIGNS * 2
@@ -203,10 +162,19 @@ class Venus:
         self.text_box.set_text(self.intro_text)
 
         while running:
-            for event in pygame.event.get():
+            for event in get_events(self):
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
+                    if self.level_complete:
+                        if event.key == pygame.K_r:
+                            self.__init__()
+                            self.game_state = "playing"
+                        elif event.key == pygame.K_q:
+                            pygame.time.set_timer(pygame.USEREVENT, 0)
+                            pygame.time.set_timer(pygame.USEREVENT, 0)
+                            return "main_menu"
+                        continue
                     if event.key == pygame.K_ESCAPE:
                         self.paused = not self.paused
                     elif self.game_state == "intro" and event.key == pygame.K_RETURN:
@@ -226,10 +194,11 @@ class Venus:
                             self.paused = False
                         elif event.key == pygame.K_q:
                             pygame.mixer.music.stop()
+                            pygame.time.set_timer(pygame.USEREVENT, 0)
                             return "main_menu"
                 elif not self.paused and self.game_state == "playing":
                     if event.type == pygame.MOUSEBUTTONDOWN and len(self.flipped_cards) < 2:
-                        pos = pygame.mouse.get_pos()
+                        pos = event.pos
                         for card in self.cards:
                             if card['rect'].collidepoint(pos) and not card['flipped']:
                                 card['flipped'] = True
@@ -268,29 +237,18 @@ class Venus:
                 if self.matched_pairs == 6:
                     self.level_complete = True
                     self.game_state = "victory"
+                    complete_level('venus')
                     self.text_box.set_text(self.victory_text)
 
                 # Control the game speed
-                clock.tick(30)
+
             else:
                 self.show_congratulations()
                 self.text_box.update()
                 self.text_box.draw(self.screen)
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                    elif event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_r:  # Retry current level
-                            self.level_complete = False
-                            self.matched_pairs = 0
-                            self.attempts = 0
-                            self.cards = self.create_cards()
-                            self.game_state = "playing"
-                        elif event.key == pygame.K_q:  # Quit game
-                            pygame.mixer.music.stop()
-                            return "main_menu"
-
+            draw_options(self)
             pygame.display.flip()
+            clock.tick(60)
 
         pygame.mixer.music.stop()  # Stop music when quitting the game
         pygame.quit()

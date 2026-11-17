@@ -1,74 +1,12 @@
+from ui_controls import draw_options
+from input_controls import get_events, pressed_keys
+from campaign import complete_level
+from dialogue import DialogueBox
+from display_settings import game_size
 import pygame
 import textwrap
 
-class TextBox:
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.text = ""
-        self.rendered_text = []
-        self.text_content = []
-        self.reveal_index = 0
-        self.line_spacing = 5
-        self.font = pygame.font.Font(None, 32)
-        self.current_text_index = 0
-
-    def set_text(self, text):
-        if isinstance(text, list):
-            self.text = text
-            self.current_text_index = 0
-            self.set_current_text()
-        else:
-            self.text = [text]
-            self.set_current_text()
-
-    def set_current_text(self):
-        current_text = self.text[self.current_text_index]
-        self.rendered_text = []
-        self.text_content = []
-        wrapped_text = self.wrap_text(current_text, self.rect.width - 20)
-        for line in wrapped_text:
-            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
-            self.text_content.append(line)
-        self.reveal_index = 0
-
-    def wrap_text(self, text, max_width):
-        lines = text.split('\n')
-        wrapped_lines = []
-        for line in lines:
-            words = line.split(' ')
-            current_line = ""
-            for word in words:
-                test_line = current_line + word + " "
-                if self.font.size(test_line)[0] <= max_width:
-                    current_line = test_line
-                else:
-                    wrapped_lines.append(current_line.strip())
-                    current_line = word + " "
-            wrapped_lines.append(current_line.strip())
-        return wrapped_lines
-
-    def update(self):
-        self.reveal_index += 1
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, (0, 0, 0), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
-
-        y = self.rect.top + 10
-        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
-            x = self.rect.left + 10
-            if i * len(content) < self.reveal_index:
-                surface.blit(line, (x, y))
-                y += line.get_height() + self.line_spacing
-
-    def is_finished(self):
-        if self.reveal_index >= sum(len(line) for line in self.text_content):
-            if self.current_text_index < len(self.text) - 1:
-                self.current_text_index += 1
-                self.set_current_text()
-                return False
-            return True
-        return False
+TextBox = DialogueBox
 
 
 class Mercury:
@@ -76,9 +14,7 @@ class Mercury:
         pygame.init()
 
         # Get the screen info
-        screen_info = pygame.display.Info()
-        self.screen_width = screen_info.current_w
-        self.screen_height = screen_info.current_h
+        self.screen_width, self.screen_height = game_size()
 
         self.white = (255, 255, 255)
         self.black = (0, 0, 0)
@@ -229,11 +165,13 @@ class Mercury:
 
     def main(self):
         running = True
+        clock = pygame.time.Clock()
 
         self.text_box.set_text(self.intro_text)
 
         while running:
-            for event in pygame.event.get():
+            clock.tick(60)
+            for event in get_events(self):
                 if event.type == pygame.QUIT:
                     running = False
 
@@ -275,25 +213,27 @@ class Mercury:
                             self.direction = 2
                             self.answered = True
 
-                if event.type == pygame.KEYUP:
-                    if event.key in (pygame.K_UP, pygame.K_DOWN):
-                        self.direction = 0
 
             if self.game_completed:
+                self.text_box.update()
                 self.game_state = "victory"
+                complete_level('mercury')
                 self.screen.fill(self.white)
                 self.draw_congratulations_menu()
+                draw_options(self)
                 pygame.display.flip()
                 continue
 
             if self.game_over:
+                self.text_box.update()
                 self.game_state = "defeat"
                 self.screen.fill(self.white)
                 self.draw_game_over_menu()
+                draw_options(self)
                 pygame.display.flip()
                 continue
 
-            if not self.paused and not self.show_pause_menu:
+            if self.game_state == "playing" and not self.paused and not self.show_pause_menu:
                 self.trolley_x += self.trolley_speed
 
             if self.trolley_x > self.divergence_x and not self.show_question and not self.at_divergence:
@@ -337,6 +277,7 @@ class Mercury:
             if self.game_state == "playing":
                 if self.game_completed:
                     self.game_state = "victory"
+                    complete_level('mercury')
                     self.text_box.set_text(self.victory_text)
                 elif self.game_over:
                     self.game_state = "defeat"
@@ -379,8 +320,9 @@ class Mercury:
                 self.text_box.update()
                 self.draw_game_over_menu()
 
+            draw_options(self)
             pygame.display.flip()
-            pygame.time.Clock().tick(60)
+
 
         pygame.quit()
 

@@ -1,3 +1,8 @@
+from ui_controls import draw_options
+from input_controls import get_events, pressed_keys
+from campaign import complete_level
+from dialogue import DialogueBox
+from display_settings import game_size
 import pygame
 import random
 import math
@@ -6,56 +11,7 @@ import time
 from pygame import mixer
 
 
-class TextBox:
-    def __init__(self, x, y, width, height, font_size):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.text = ""
-        self.rendered_text = []
-        self.text_content = []
-        self.reveal_index = 0
-        self.line_spacing = int(height * 0.05)
-        self.font = pygame.font.Font(None, font_size)
-
-    def set_text(self, text):
-        self.text = text
-        self.rendered_text = []
-        self.text_content = []
-        wrapped_text = self.wrap_text(text, self.rect.width - 20)
-        for line in wrapped_text:
-            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
-            self.text_content.append(line)
-        self.reveal_index = 0
-
-    def wrap_text(self, text, max_width):
-        words = text.split(' ')
-        wrapped_lines = []
-        current_line = ""
-        for word in words:
-            test_line = current_line + word + " "
-            if self.font.size(test_line)[0] <= max_width:
-                current_line = test_line
-            else:
-                wrapped_lines.append(current_line.strip())
-                current_line = word + " "
-        wrapped_lines.append(current_line.strip())
-        return wrapped_lines
-
-    def update(self):
-        self.reveal_index += 1
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, (0, 0, 0), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
-
-        y = self.rect.top + 10
-        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
-            x = self.rect.left + 10
-            if i * len(content) < self.reveal_index:
-                surface.blit(line, (x, y))
-                y += line.get_height() + self.line_spacing
-
-    def is_finished(self):
-        return self.reveal_index >= sum(len(line) for line in self.text_content)
+TextBox = DialogueBox
 
 
 class Uranus:
@@ -64,8 +20,7 @@ class Uranus:
         pygame.init()
 
         # Screen dimensions
-        info = pygame.display.Info()
-        self.WIDTH, self.HEIGHT = info.current_w, info.current_h
+        self.WIDTH, self.HEIGHT = game_size()
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Balloon Pop Game")
 
@@ -136,10 +91,12 @@ class Uranus:
             self.x += self.speed * math.cos(self.direction)
             self.y += self.speed * math.sin(self.direction)
 
-            if self.x < 0 or self.x > self.parent.WIDTH:
+            if self.x < self.radius or self.x > self.parent.WIDTH - self.radius:
                 self.direction = math.pi - self.direction
-            if self.y < 0 or self.y > self.parent.HEIGHT:
+                self.x = max(self.radius, min(self.parent.WIDTH - self.radius, self.x))
+            if self.y < self.radius or self.y > self.parent.HEIGHT - self.radius:
                 self.direction = -self.direction
+                self.y = max(self.radius, min(self.parent.HEIGHT - self.radius, self.y))
 
         def draw(self, screen):
             pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
@@ -164,11 +121,11 @@ class Uranus:
         def draw(self, screen):
             arrow_length = int(self.parent.WIDTH * 0.03)
             arrow_width = int(self.parent.HEIGHT * 0.01)
-            points = [
-                (self.x, self.y),
-                (self.x - arrow_length, self.y - arrow_width),
-                (self.x - arrow_length, self.y + arrow_width),
-            ]
+            direction = pygame.Vector2(self.dx, self.dy).normalize()
+            tip = pygame.Vector2(self.x, self.y)
+            tail = tip - direction * arrow_length
+            side = pygame.Vector2(-direction.y, direction.x) * arrow_width
+            points = [tip, tail + side, tail - side]
             pygame.draw.polygon(screen, self.color, points)
 
     def check_collision(self, arrow):
@@ -235,9 +192,10 @@ class Uranus:
             if self.text_box.is_finished():
                 self.display_message("", "Press R to restart or Q to quit")
 
+            draw_options(self)
             pygame.display.flip()
 
-            for event in pygame.event.get():
+            for event in get_events(self):
                 if event.type == pygame.QUIT:
                     return "quit"
                 if event.type == pygame.KEYDOWN:
@@ -258,7 +216,7 @@ class Uranus:
         while running:
             self.screen.blit(self.background, (0, 0))
 
-            for event in pygame.event.get():
+            for event in get_events(self):
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
@@ -266,17 +224,14 @@ class Uranus:
                         self.game_state = "playing"
                     elif self.game_state == "playing":
                         if event.key == pygame.K_ESCAPE:
-                            if self.paused:
-                                if self.selected_option == 0:
-                                    self.paused = False  # Resume
-                                elif self.selected_option == 1:
-                                    self.reset_game()  # Restart
-                                elif self.selected_option == 2:
-                                    pygame.mixer.music.stop()  # Quit
-                                    return "main_menu"
-                            else:
-                                self.paused = not self.paused
+                            self.paused = not self.paused
+                            self.selected_option = 0
                         elif self.paused:
+                            if event.key == pygame.K_q:
+                                pygame.mixer.music.stop()
+                                return "main_menu"
+                            elif event.key == pygame.K_r:
+                                self.reset_game()
                             if event.key == pygame.K_DOWN:
                                 self.selected_option = (self.selected_option + 1) % len(self.menu_options)
                             elif event.key == pygame.K_UP:
@@ -320,12 +275,13 @@ class Uranus:
                                 self.player_score += 1
                                 if self.player_score == 5:
                                     self.game_state = "victory"
+                                    complete_level('uranus')
                                     self.text_box.set_text(self.victory_text)
                             else:
                                 self.game_state = "defeat"
                                 self.text_box.set_text(self.defeat_text)
                                 self.arrow = None
-                        elif self.arrow.y < 0 or self.arrow.x < 0 or self.arrow.x > self.WIDTH:
+                        elif self.arrow.y < 0 or self.arrow.y > self.HEIGHT or self.arrow.x < 0 or self.arrow.x > self.WIDTH:
                             self.game_state = "defeat"
                             self.text_box.set_text(self.defeat_text)
                             self.arrow = None
@@ -353,6 +309,7 @@ class Uranus:
                 elif result == "quit":
                     running = False
 
+            draw_options(self)
             pygame.display.flip()
             self.clock.tick(60)
 

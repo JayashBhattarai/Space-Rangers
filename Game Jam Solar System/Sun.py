@@ -1,3 +1,8 @@
+from ui_controls import draw_options
+from input_controls import get_events, pressed_keys
+from campaign import complete_level
+from dialogue import DialogueBox
+from display_settings import game_size
 import pygame
 import math
 import random
@@ -5,51 +10,15 @@ import time
 from pygame import mixer
 import textwrap
 
-class TextBox:
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.text = ""
-        self.rendered_text = []
-        self.text_content = []
-        self.reveal_index = 0
-        self.line_spacing = 5
-        self.font = pygame.font.Font(None, int(height * 0.2))
+TextBox = DialogueBox
 
-    def set_text(self, text):
-        self.text = text
-        self.rendered_text = []
-        self.text_content = []
-        wrapped_text = textwrap.wrap(text, width=self.rect.width // 10)
-        for line in wrapped_text:
-            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
-            self.text_content.append(line)
-        self.reveal_index = 0
-
-    def update(self):
-        self.reveal_index += 1
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, (0, 0, 0), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
-
-        y = self.rect.top + 10
-        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
-            x = self.rect.left + 10
-            if i * len(content) < self.reveal_index:
-                surface.blit(line, (x, y))
-                y += line.get_height() + self.line_spacing
-
-    def is_finished(self):
-        return self.reveal_index >= sum(len(line) for line in self.text_content)
 
 class Sun:
     def __init__(self):
         pygame.init()
 
         # Get the screen info
-        screen_info = pygame.display.Info()
-        self.screen_width = screen_info.current_w
-        self.screen_height = screen_info.current_h
+        self.screen_width, self.screen_height = game_size()
 
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
 
@@ -162,12 +131,13 @@ class Sun:
         self.enemy_bullets.append([x, y])
 
     def isCollision(self, enemyX, enemyY, laserX, laserY):
-        distance = math.sqrt(math.pow(enemyX - laserX, 2) + math.pow(enemyY - laserY, 2))
-        return distance < self.enemyImg[0].get_width() // 2
+        enemy_rect = self.enemyImg[0].get_rect(topleft=(enemyX, enemyY))
+        laser_rect = self.laserImg.get_rect(topleft=(laserX + self.playerImg.get_width() // 2 - self.laserImg.get_width() // 2, laserY))
+        return enemy_rect.colliderect(laser_rect)
 
     def isCollision2(self, playerX, playerY, bulletX, bulletY):
-        distance = math.sqrt(math.pow(playerX - bulletX, 2) + math.pow(playerY - bulletY, 2))
-        return distance < self.playerImg.get_width() // 2
+        return self.playerImg.get_rect(topleft=(playerX, playerY)).colliderect(
+            self.enemy_bullet_img.get_rect(topleft=(bulletX, bulletY)))
 
     def draw_pause_menu(self):
         overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
@@ -182,33 +152,18 @@ class Sun:
             if idx == self.selected_option:
                 pygame.draw.rect(self.screen, (255, 255, 255), text_rect, 3)
 
-    def handle_pause_input(self):
-        keys = pygame.key.get_pressed()
-
-        if keys[pygame.K_UP]:
-            self.selected_option = (self.selected_option - 1) % len(self.menu_options)
-        elif keys[pygame.K_DOWN]:
-            self.selected_option = (self.selected_option + 1) % len(self.menu_options)
-        elif keys[pygame.K_RETURN]:
-            if self.selected_option == 0:  # Resume
-                self.paused = False
-            elif self.selected_option == 1:  # Restart
-                self.__init__()
-                self.text_box.set_text(self.intro_text)
-            elif self.selected_option == 2:  # Quit
-                pygame.mixer.music.stop()
-                return "main_menu"
-
     def main(self):
         running = True
+        clock = pygame.time.Clock()
 
         self.text_box.set_text(self.intro_text)
 
         while running:
+            clock.tick(60)
             self.screen.fill((0, 0, 0))
             self.screen.blit(self.background, (0, 0))
 
-            for event in pygame.event.get():
+            for event in get_events(self):
                 if event.type == pygame.QUIT:
                     running = False
 
@@ -216,6 +171,25 @@ class Sun:
                     if event.key == pygame.K_ESCAPE:
                         self.paused = not self.paused
 
+                    if self.paused:
+                        if event.key == pygame.K_UP:
+                            self.selected_option = (self.selected_option - 1) % 3
+                        elif event.key == pygame.K_DOWN:
+                            self.selected_option = (self.selected_option + 1) % 3
+                        elif event.key == pygame.K_r:
+                            self.__init__()
+                            self.text_box.set_text(self.intro_text)
+                        elif event.key == pygame.K_q:
+                            return "main_menu"
+                        elif event.key == pygame.K_RETURN:
+                            if self.selected_option == 0:
+                                self.paused = False
+                            elif self.selected_option == 1:
+                                self.__init__()
+                                self.text_box.set_text(self.intro_text)
+                            else:
+                                return "main_menu"
+                        continue
                     if self.game_state == "intro" and event.key == pygame.K_SPACE:
                         if self.text_box.is_finished():
                             self.game_state = "playing"
@@ -248,16 +222,13 @@ class Sun:
 
             if self.paused:
                 self.draw_pause_menu()
-                result = self.handle_pause_input()
-                if result == "main_menu":
-                    running = False
-                    return "main_menu"
+
 
             if self.game_state == "intro":
                 self.text_box.update()
                 self.text_box.draw(self.screen)
 
-            elif self.game_state == "playing":
+            elif self.game_state == "playing" and not self.paused:
                 self.playerX += self.playerX_change
                 if self.playerX <= 0:
                     self.playerX = 0
@@ -277,7 +248,7 @@ class Sun:
                         self.last_fired_time = current_time
                         self.fire_interval = random.uniform(1, 3)
 
-                    collision = self.isCollision(self.enemyX[i], self.enemyY[i], self.laserX, self.laserY)
+                    collision = self.laser_state == "fire" and self.isCollision(self.enemyX[i], self.enemyY[i], self.laserX, self.laserY)
                     if collision:
                         explosion_sound = mixer.Sound('src/explosion.wav')
                         explosion_sound.play()
@@ -288,6 +259,7 @@ class Sun:
                         if self.hp_value == 0:
                             self.enemyY[i] = 2000
                             self.game_state = "victory"
+                            complete_level('sun')
                             self.text_box.set_text(self.victory_text)
 
                     self.enemy(self.enemyX[i], self.enemyY[i], i)
@@ -300,7 +272,7 @@ class Sun:
                     self.fire_laser(self.laserX, self.laserY)
                     self.laserY -= self.laserY_change
 
-                for bullet in self.enemy_bullets:
+                for bullet in self.enemy_bullets[:]:
                     bullet[1] += self.bulletY_change
                     self.screen.blit(self.enemy_bullet_img, (bullet[0], bullet[1]))
                     collision2 = self.isCollision2(self.playerX, self.playerY, bullet[0], bullet[1])
@@ -313,7 +285,7 @@ class Sun:
                             self.game_state = "defeat"
                             self.text_box.set_text(self.defeat_text)
 
-                    if bullet[1] >= self.screen_height:
+                    elif bullet[1] >= self.screen_height:
                         self.enemy_bullets.remove(bullet)
 
                 self.player(self.playerX, self.playerY)
@@ -349,10 +321,7 @@ class Sun:
                 self.text_box.update()
                 self.text_box.draw(self.screen)
 
-            if self.paused:
-                self.draw_pause_menu()
-                self.handle_pause_input()
-
+            draw_options(self)
             pygame.display.update()
 
         pygame.quit()

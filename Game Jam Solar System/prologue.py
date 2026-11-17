@@ -1,67 +1,20 @@
+from ui_controls import draw_options
+from input_controls import get_events, pressed_keys
+from dialogue import DialogueBox
+from display_settings import game_size
 import pygame
 from pygame import mixer
 import ctypes
 
 
-class TextBox:
-    def __init__(self, x, y, width, height, font_size):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.text = ""
-        self.rendered_text = []
-        self.text_content = []
-        self.reveal_index = 0
-        self.line_spacing = 5
-        self.font = pygame.font.Font(None, font_size)
-
-    def set_text(self, text):
-        self.text = text
-        self.rendered_text = []
-        self.text_content = []
-        wrapped_text = self.wrap_text(text, self.rect.width - 20)
-        for line in wrapped_text:
-            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
-            self.text_content.append(line)
-        self.reveal_index = 0
-
-    def wrap_text(self, text, max_width):
-        words = text.split(' ')
-        wrapped_lines = []
-        current_line = ""
-        for word in words:
-            test_line = current_line + word + " "
-            if self.font.size(test_line)[0] <= max_width:
-                current_line = test_line
-            else:
-                wrapped_lines.append(current_line.strip())
-                current_line = word + " "
-        wrapped_lines.append(current_line.strip())
-        return wrapped_lines
-
-    def update(self):
-        self.reveal_index += 1
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, (0, 0, 0), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
-
-        y = self.rect.top + 10
-        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
-            x = self.rect.left + 10
-            if i * len(content) < self.reveal_index:
-                surface.blit(line, (x, y))
-                y += line.get_height() + self.line_spacing
-
-    def is_finished(self):
-        return self.reveal_index >= sum(len(line) for line in self.text_content)
+TextBox = DialogueBox
 
 
 class Prologue:
     def __init__(self):
         pygame.init()
 
-        user32 = ctypes.windll.user32
-        self.WIDTH = user32.GetSystemMetrics(0)
-        self.HEIGHT = user32.GetSystemMetrics(1)
+        self.WIDTH, self.HEIGHT = game_size()
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Prologue")
 
@@ -125,7 +78,7 @@ class Prologue:
         running = True
 
         while running:
-            for event in pygame.event.get():
+            for event in get_events(self):
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
@@ -159,6 +112,7 @@ class Prologue:
                 self.text_box.update()
                 self.text_box.draw(self.screen)
 
+            draw_options(self)
             pygame.display.flip()
             clock.tick(60)
 

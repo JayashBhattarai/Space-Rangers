@@ -1,58 +1,14 @@
+from ui_controls import draw_options
+from input_controls import get_events, pressed_keys
+from campaign import complete_level
+from dialogue import DialogueBox
+from display_settings import game_size
 import pygame
 import random
 import textwrap
 from pygame import mixer
 
-class TextBox:
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.text = ""
-        self.rendered_text = []
-        self.text_content = []
-        self.reveal_index = 0
-        self.line_spacing = 10
-        self.font = pygame.font.Font(None, 40)
-
-    def set_text(self, text):
-        self.text = text
-        self.rendered_text = []
-        self.text_content = []
-        wrapped_text = self.wrap_text(text, self.rect.width - 20)
-        for line in wrapped_text:
-            self.rendered_text.append(self.font.render(line, True, (255, 255, 255)))
-            self.text_content.append(line)
-        self.reveal_index = 0
-
-    def wrap_text(self, text, max_width):
-        words = text.split(' ')
-        wrapped_lines = []
-        current_line = ""
-        for word in words:
-            test_line = current_line + word + " "
-            if self.font.size(test_line)[0] <= max_width:
-                current_line = test_line
-            else:
-                wrapped_lines.append(current_line.strip())
-                current_line = word + " "
-        wrapped_lines.append(current_line.strip())
-        return wrapped_lines
-
-    def update(self):
-        self.reveal_index += 1
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, (0, 0, 0), self.rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
-
-        y = self.rect.top + 10
-        for i, (line, content) in enumerate(zip(self.rendered_text, self.text_content)):
-            x = self.rect.left + 10
-            if i * len(content) < self.reveal_index:
-                surface.blit(line, (x, y))
-                y += line.get_height() + self.line_spacing
-
-    def is_finished(self):
-        return self.reveal_index >= sum(len(line) for line in self.text_content)
+TextBox = DialogueBox
 
 
 class Earth:
@@ -62,9 +18,7 @@ class Earth:
         mixer.init()
 
         # Set up the display
-        info = pygame.display.Info()
-        self.WIDTH = info.current_w
-        self.HEIGHT = info.current_h
+        self.WIDTH, self.HEIGHT = game_size()
 
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("2D Airplane Dodge")
@@ -105,7 +59,7 @@ class Earth:
         # Create initial buildings
         self.create_buildings()
 
-        self.text_box = TextBox(50, self.HEIGHT-250, self.WIDTH-100, 200)
+        self.text_box = TextBox(int(self.WIDTH * 0.04), int(self.HEIGHT * 0.75), int(self.WIDTH * 0.92), int(self.HEIGHT * 0.2))
         self.game_state = "intro"
         self.intro_text = "Here we are! John, your mission is to navigate through the city. Avoid buildings and reach a score of 20 to win!"
         self.victory_text = "Congratulations! You've successfully completed the Earth stage! Obtained the Aries gem"
@@ -165,7 +119,7 @@ class Earth:
         self.text_box.set_text(self.intro_text)
 
         while running:
-            for event in pygame.event.get():
+            for event in get_events(self):
                 if event.type == pygame.QUIT:
                     running = False
 
@@ -228,10 +182,11 @@ class Earth:
                         self.game_over = True
 
                     # Check if score reaches 20 for victory condition
-                    if self.score >= 20:
+                    if self.score >= 20 and not self.game_over:
                         self.game_over = True
                         victory = True
                         self.game_state = "victory"
+                        complete_level('earth')
                         self.text_box.set_text(self.victory_text)
 
                     # Check if game is over (not victory)
@@ -279,9 +234,9 @@ class Earth:
                 quit_text = font_small.render("Press Q to Quit", True, self.DARK_GRAY)
                 self.screen.blit(restart_text,
                                  (self.WIDTH // 2 - restart_text.get_width() // 2,
-                                  self.HEIGHT // 3 + game_over_text.get_height() + 50))
+                                  int(self.HEIGHT * 0.48)))
                 self.screen.blit(quit_text, (self.WIDTH // 2 - quit_text.get_width() // 2,
-                                             self.HEIGHT // 3 + game_over_text.get_height() + restart_text.get_height() + 100))
+                                             int(self.HEIGHT * 0.56)))
 
                 # Display the text box with victory/defeat text
                 self.text_box.update()
@@ -291,7 +246,7 @@ class Earth:
                 # Draw pause menu
                 self.draw_pause_menu()
 
-                keys = pygame.key.get_pressed()
+                keys = pressed_keys()
                 if keys[pygame.K_r]:
                     self.paused = False
                 elif keys[pygame.K_n]:
@@ -308,6 +263,7 @@ class Earth:
                     return "main_menu"
 
             # Update the display
+            draw_options(self)
             pygame.display.flip()
 
             # Control the game speed
